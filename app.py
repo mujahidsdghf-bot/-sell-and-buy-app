@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, request, redirect, url_for
+from flask import Flask, render_template_string, request, redirect, url_for, session
 import boto3
 import sqlite3
 from datetime import datetime
@@ -6,9 +6,8 @@ import random
 from twilio.rest import Client
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_production'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_otp_flow'
 
-# మీరు ఇచ్చిన అసలైన Twilio క్రెడెన్షియల్స్
 TWILIO_ACCOUNT_SID = 'AC2f4c5f7922c852e68b8eeaac4f5dd03a'
 TWILIO_AUTH_TOKEN = '2b6d6eed8daf347db44006f36571d7a8'
 TWILIO_WHATSAPP_NUMBER = 'whatsapp:+14155238886'
@@ -92,25 +91,18 @@ def index():
         <style>
             body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; padding-bottom: 70px; }
             .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
-            
-            /* మల్టీ కలర్ లోగో */
             .logo-container { display: flex; align-items: center; gap: 8px; }
             .logo-text { font-size: 20px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-            
             .search-container { background: white; padding: 10px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
             .location-bar, .search-bar { display: flex; gap: 8px; align-items: center; border: 2px solid #002f34; border-radius: 4px; padding: 8px; }
             .location-bar input, .search-bar input { width: 100%; border: none; outline: none; font-size: 14px; }
-            
             .top-ad-banner { background: #ffce32; color: #002f34; padding: 10px; text-align: center; font-weight: bold; font-size: 13px; border-bottom: 1px solid #e0b825; }
-
             .categories { padding: 15px; background: white; margin-top: 5px; }
             .categories h3 { font-size: 16px; margin-bottom: 10px; }
             .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
             .cat-item { background: #ebeeef; padding: 12px 5px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; color: #002f34; display: block; }
             .cat-item:hover { background: #002f34; color: white; }
-            
             .section-title { padding: 15px 15px 5px 15px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-            
             .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 15px; }
             .product-card { background: white; border: 1px solid #ebeeef; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; color: inherit; display: block; }
             .product-card img { width: 100%; height: 150px; object-fit: cover; background: #eee; }
@@ -118,13 +110,10 @@ def index():
             .price { font-size: 18px; font-weight: bold; color: #002f34; margin: 4px 0; }
             .title { font-size: 14px; color: #333; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .loc { font-size: 11px; color: #777; margin-top: 3px; }
-
             .ad-banner-box { grid-column: span 2; background: #002f34; color: #ffce32; padding: 15px; text-align: center; font-weight: bold; border-radius: 6px; margin: 5px 0; border: 1px dashed #ffce32; }
-
             .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #ddd; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); z-index: 99; }
             .nav-item { text-align: center; font-size: 11px; color: #555; text-decoration: none; cursor: pointer; }
             .sell-btn-nav { background: #ffce32; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin-top: -15px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); color: #002f34; }
-
             .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
             .modal-content { background: white; margin: 10% auto; padding: 20px; width: 85%; max-width: 400px; border-radius: 8px; position: relative; }
             .close { float: right; font-size: 22px; cursor: pointer; font-weight: bold; color: #333; }
@@ -318,6 +307,56 @@ def index():
     """
     return render_template_string(html_content, products=products, user=user)
 
+@app.route('/verify_otp_page')
+def verify_otp_page():
+    verify_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>OTP Verification - Sell & Buy</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f7f8f9; color: #002f34; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+            .box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 90%; max-width: 350px; text-align: center; }
+            input { width: 100%; padding: 10px; margin: 10px 0; font-size: 18px; text-align: center; letter-spacing: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+            button { background: #25d366; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; font-size: 15px; cursor: pointer; }
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <h3 style="color: #075e54; margin-top: 0;">WhatsApp OTP ఎంటర్ చేయండి</h3>
+            <p style="font-size: 13px; color: #666;">మీ WhatsApp నంబర్‌కు పంపబడిన 4 అంకెల కోడ్‌ని ఇక్కడ రాయండి.</p>
+            <form action="/verify_otp" method="POST">
+                <input type="text" name="entered_otp" required placeholder="XXXX" maxlength="4">
+                <button type="submit">వెరిఫై చేసి లాగిన్ అవ్వండి</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+    return verify_html
+
+@app.route('/verify_otp', methods=['POST'])
+def verify_otp():
+    entered = request.form.get('entered_otp')
+    saved_otp = request.cookies.get('temp_otp')
+    name = request.cookies.get('temp_name')
+    contact = request.cookies.get('temp_contact')
+
+    if entered == saved_otp:
+        joined_date = datetime.now().strftime("%d-%m-%Y")
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('INSERT OR IGNORE INTO users (name, contact, joined_date) VALUES (?, ?, ?)', (name, contact, joined_date))
+        conn.commit()
+        conn.close()
+
+        resp = redirect(url_for('index'))
+        resp.set_cookie('user_contact', contact, max_age=60*60*24*30)
+        return resp
+    else:
+        return "<script>alert('తప్పు OTP! దయచేసి మళ్లీ ప్రయత్నించండి.'); window.location.href='/';</script>"
+
 @app.route('/my_ads')
 def my_ads_page():
     conn = sqlite3.connect('database.db')
@@ -509,7 +548,6 @@ def send_otp():
         contact = raw_contact if raw_contact.startswith("+") else "+91" + raw_contact
 
     otp_code = str(random.randint(1000, 9999))
-    joined_date = datetime.now().strftime("%d-%m-%Y")
     
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -521,14 +559,11 @@ def send_otp():
     except Exception as e:
         print(f"Twilio ఎర్రర్: {e}")
 
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('INSERT OR IGNORE INTO users (name, contact, joined_date) VALUES (?, ?, ?)', (name, contact, joined_date))
-    conn.commit()
-    conn.close()
-    
-    resp = redirect(url_for('index'))
-    resp.set_cookie('user_contact', contact, max_age=60*60*24*30)
+    # OTP మరియు యూజర్ వివరాలను తాత్కాలికంగా కుకీలలో భద్రపరుస్తాం
+    resp = redirect(url_for('verify_otp_page'))
+    resp.set_cookie('temp_otp', otp_code, max_age=300)
+    resp.set_cookie('temp_name', name, max_age=300)
+    resp.set_cookie('temp_contact', contact, max_age=300)
     return resp
 
 @app.route('/logout')
