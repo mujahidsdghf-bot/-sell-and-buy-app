@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_pro_max_final'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_fix'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -69,14 +69,14 @@ def index():
     
     user_contact = request.cookies.get('user_contact')
     user = None
-    my_ads = []
     
     if user_contact:
         cursor.execute('SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT 1', (user_contact,))
         user = cursor.fetchone()
-        if user:
-            cursor.execute('SELECT id, title, price, image_url FROM products WHERE seller_contact = ? ORDER BY id DESC', (user_contact,))
-            my_ads = cursor.fetchall()
+
+    # ఇక్కడ మార్పు: లాగిన్ అయిన యూజర్‌కి సులువుగా ఉండేందుకు పోస్ట్ చేసిన అన్నీ యాడ్స్ "My Ads" లో కనిపిస్తాయి
+    cursor.execute('SELECT id, title, price, image_url FROM products ORDER BY id DESC')
+    my_ads = cursor.fetchall()
 
     conn.close()
 
@@ -238,7 +238,7 @@ def index():
                     <label style="font-size: 12px; font-weight: bold;">ఫోటో:</label>
                     <input type="file" name="file" required style="border:none;">
 
-                    <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్ (లాగిన్ నంబర్ ఇవ్వండి):</label>
+                    <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్:</label>
                     <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Mobile Number">
                     
                     <button type="submit">పోస్ట్ చేయండి</button>
@@ -255,7 +255,7 @@ def index():
             </div>
         </div>
 
-        <!-- My Ads Modal (ఇక్కడ లాగిన్ అయిన యూజర్ యాడ్స్ మాత్రమే కనిపిస్తాయి మరియు డిలీట్ చేసుకోవచ్చు) -->
+        <!-- My Ads Modal -->
         <div id="adsModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('adsModal')">&times;</span>
@@ -275,7 +275,7 @@ def index():
                             </div>
                         {% endfor %}
                     {% else %}
-                        <p style="color: #888; font-size: 13px;">మీరు ఈ నంబర్‌తో ఎలాంటి యాడ్స్ పోస్ట్ చేయలేదు.</p>
+                        <p style="color: #888; font-size: 13px;">ఇక్కడ ఎలాంటి యాడ్స్ లేవు.</p>
                     {% endif %}
                 {% else %}
                     <p style="color: #d9534f; font-size: 13px; font-weight: bold;">⚠️ దయచేసి ముందుగా అకౌంట్ సెక్షన్‌లో లాగిన్ అవ్వండి!</p>
