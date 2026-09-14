@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_release'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_v3'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -87,7 +87,8 @@ def index():
             .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
             
             /* మల్టీ కలర్ లోగో */
-            .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+            .logo-container { display: flex; align-items: center; gap: 8px; }
+            .logo-text { font-size: 20px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
             
             .search-container { background: white; padding: 10px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
             .location-bar, .search-bar { display: flex; gap: 8px; align-items: center; border: 2px solid #002f34; border-radius: 4px; padding: 8px; }
@@ -127,7 +128,10 @@ def index():
     <body>
 
         <div class="header">
-            <div class="logo-text">⚡ Sell & Buy 🚀</div>
+            <div class="logo-container">
+                <span style="font-size: 20px;">⚡</span>
+                <div class="logo-text">Sell & Buy 🚀</div>
+            </div>
             <span style="font-size: 13px;">📍 Hyderabad</span>
         </div>
 
@@ -448,14 +452,12 @@ def upload_file():
         return 'ఫైల్ సెలెక్ట్ చేయలేదు'
 
     try:
+        # ఇక్కడ ACL సమస్య రాకుండా తొలగించబడింది
         s3_client.upload_fileobj(
             file,
             S3_BUCKET,
             file.filename,
-            ExtraArgs={
-                "ContentType": file.content_type,
-                "ACL": "public-read"
-            }
+            ExtraArgs={"ContentType": file.content_type}
         )
         image_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file.filename}"
         
