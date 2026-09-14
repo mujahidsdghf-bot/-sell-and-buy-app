@@ -1,11 +1,17 @@
-from flask import Flask, render_template_string, request, redirect, url_for
+from flask import Flask, render_template_string, request, redirect, url_for, session
 import boto3
 import sqlite3
 from datetime import datetime
 import random
+from twilio.rest import Client
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_instant_otp'
+app.secret_key = 'sellandbuy_ultra_secure_cyber_key_2026_production'
+
+# మీ Twilio క్రెడెన్షియల్స్
+TWILIO_ACCOUNT_SID = 'AC2f4c5f7922c852e68b8eeaac4f5dd03a'
+TWILIO_AUTH_TOKEN = '2b6d6eed8daf347db44006f36571d7a8'
+TWILIO_WHATSAPP_NUMBER = 'whatsapp:+14155238886'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -40,6 +46,13 @@ def init_db():
             name TEXT,
             contact TEXT,
             joined_date TEXT
+        )
+    ''')
+    # OTP డేటాబేస్ టేబుల్ (సెక్యూరిటీ కోసం)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS otps (
+            contact TEXT PRIMARY KEY,
+            otp_code TEXT
         )
     ''')
     conn.commit()
@@ -264,20 +277,20 @@ def index():
                     </div>
                     <div style="background: #f1f1f1; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px;">
                         <b>⚙️ అకౌంట్ సెట్టింగ్స్:</b><br>
-                        - WhatsApp OTP వెరిఫైడ్ ✅<br>
-                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: యాక్టివ్ 🔒
+                        - Twilio Secure WhatsApp OTP ✅<br>
+                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: ఆక్టివ్ 🔒
                     </div>
                     <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
                 {% else %}
                     <form action="/send_otp" method="POST">
-                        <h4 style="margin-top: 0; color: #075e54;">🟢 WhatsApp OTP లాగిన్</h4>
+                        <h4 style="margin-top: 0; color: #075e54;">🟢 WhatsApp Secure OTP లాగిన్</h4>
                         <label style="font-size: 12px;">పేరు (Name):</label>
                         <input type="text" name="name" required placeholder="మీ పేరు">
                         
                         <label style="font-size: 12px;">10 అంకెల మొబైల్ నంబర్:</label>
                         <input type="text" name="contact" required placeholder="ఉదా: 9177411712" maxlength="10">
                         
-                        <button type="submit" style="background: #25d366; color: white; font-weight: bold;">WhatsApp OTP కోడ్ తీసుకోండి</button>
+                        <button type="submit" style="background: #25d366; color: white; font-weight: bold;">WhatsApp కి OTP పంపు</button>
                     </form>
                 {% endif %}
             </div>
@@ -304,28 +317,25 @@ def index():
 
 @app.route('/verify_otp_page')
 def verify_otp_page():
-    otp_val = request.args.get('code', '1234')
-    verify_html = f"""
+    verify_html = """
     <!DOCTYPE html>
     <html>
     <head>
         <title>OTP Verification - Sell & Buy</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body {{ font-family: Arial, sans-serif; background-color: #f7f8f9; color: #002f34; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }}
-            .box {{ background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 90%; max-width: 350px; text-align: center; }}
-            input {{ width: 100%; padding: 10px; margin: 10px 0; font-size: 20px; text-align: center; letter-spacing: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }}
-            button {{ background: #25d366; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; font-size: 15px; cursor: pointer; }}
+            body { font-family: Arial, sans-serif; background-color: #f7f8f9; color: #002f34; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+            .box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 90%; max-width: 350px; text-align: center; }
+            input { width: 100%; padding: 10px; margin: 10px 0; font-size: 20px; text-align: center; letter-spacing: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+            button { background: #25d366; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; font-size: 15px; cursor: pointer; }
         </style>
     </head>
     <body>
         <div class="box">
             <h3 style="color: #075e54; margin-top: 0;">WhatsApp OTP వెరిఫికేషన్</h3>
-            <p style="font-size: 13px; color: #666;">మీ సురక్షితమైన OTP కోడ్: <b style="color: #d9534f; font-size: 18px;">{otp_val}</b></p>
-            <p style="font-size: 12px; color: #888;">(ఈ కోడ్‌ని క్రింద ఎంటర్ చేసి లాగిన్ అవ్వండి)</p>
+            <p style="font-size: 13px; color: #666;">మీ WhatsApp నంబర్‌కు పంపబడిన 4 అంకెల కోడ్‌ని ఇక్కడ ఎంటర్ చేయండి.</p>
             <form action="/verify_otp" method="POST">
                 <input type="text" name="entered_otp" required placeholder="XXXX" maxlength="4">
-                <input type="hidden" name="actual_otp" value="{otp_val}">
                 <button type="submit">వెరిఫై చేసి లాగిన్ అవ్వండి</button>
             </form>
         </div>
@@ -336,16 +346,20 @@ def verify_otp_page():
 
 @app.route('/verify_otp', methods=['POST'])
 def verify_otp():
-    entered = request.form.get('entered_otp')
-    actual = request.form.get('actual_otp')
-    name = request.cookies.get('temp_name')
+    entered_otp = request.form.get('entered_otp').strip()
     contact = request.cookies.get('temp_contact')
+    name = request.cookies.get('temp_name')
 
-    if entered == actual:
+    # సర్వర్ డేటాబేస్ నుండి OTP ని చెక్ చేయడం (సెక్యూర్ వే)
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT otp_code FROM otps WHERE contact = ?', (contact,))
+    row = cursor.fetchone()
+
+    if row and row[0] == entered_otp:
         joined_date = datetime.now().strftime("%d-%m-%Y")
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
         cursor.execute('INSERT OR IGNORE INTO users (name, contact, joined_date) VALUES (?, ?, ?)', (name, contact, joined_date))
+        cursor.execute('DELETE FROM otps WHERE contact = ?', (contact,)) # వాడుకున్న OTP డిలీట్ అవుతుంది
         conn.commit()
         conn.close()
 
@@ -353,7 +367,8 @@ def verify_otp():
         resp.set_cookie('user_contact', contact, max_age=60*60*24*30)
         return resp
     else:
-        return "<script>alert('తప్పు OTP! దయచేసి సరైన కోడ్ ఎంటర్ చేయండి.'); window.location.href='/';</script>"
+        conn.close()
+        return "<script>alert('తప్పు OTP లేదా కాలం చెల్లిన కోడ్! దయచేసి మళ్లీ ప్రయత్నించండి.'); window.location.href='/';</script>"
 
 @app.route('/my_ads')
 def my_ads_page():
@@ -545,10 +560,28 @@ def send_otp():
     else:
         contact = raw_contact if raw_contact.startswith("+") else "+91" + raw_contact
 
+    # 1. సర్వర్ సైడ్ రాండమ్ OTP జనరేట్ చేయడం
     otp_code = str(random.randint(1000, 9999))
     
-    # ఆటోమేటిక్‌గా వెరిఫై పేజీకి వెళ్తుంది, అక్కడ OTP స్పష్టంగా కనిపిస్తుంది
-    resp = redirect(url_for('verify_otp_page', code=otp_code))
+    # 2. డేటాబేస్‌లో ఈ నంబర్‌కు సంబంధించిన OTP ని భద్రపరచడం (హ్యాక్ కాకుండా సెక్యూరిటీ కోసం)
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR REPLACE INTO otps (contact, otp_code) VALUES (?, ?)', (contact, otp_code))
+    conn.commit()
+    conn.close()
+
+    # 3. ట్వీలియో ద్వారా వాట్సాప్‌కు మెసేజ్ పంపడం
+    try:
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        client.messages.create(
+            from_=TWILIO_WHATSAPP_NUMBER,
+            body=f"హలో {name}! Sell & Buy యాప్ సురక్షితమైన వెరిఫికేషన్ కోడ్ (OTP): *{otp_code}*",
+            to=f"whatsapp:{contact}"
+        )
+    except Exception as e:
+        print(f"Twilio ఎర్రర్: {e}")
+
+    resp = redirect(url_for('verify_otp_page'))
     resp.set_cookie('temp_name', name, max_age=300)
     resp.set_cookie('temp_contact', contact, max_age=300)
     return resp
