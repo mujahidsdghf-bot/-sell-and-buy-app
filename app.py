@@ -1,10 +1,10 @@
-from flask import Flask, render_template_string, request, redirect, url_for
+from flask import Flask, render_template_string, request, redirect, url_for, session
 import boto3
 import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_safe'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_safe_pro'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -17,7 +17,7 @@ s3_client = boto3.client(
 )
 
 def init_db():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('database.db', check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS products (
@@ -48,6 +48,7 @@ init_db()
 
 @app.after_request
 def add_security_headers(response):
+    # సైబర్ సెక్యూరిటీ & ప్రైవసీ హెడర్స్
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
@@ -67,14 +68,18 @@ def index():
     
     products = cursor.fetchall()
     
-    cursor.execute('SELECT name, contact, joined_date FROM users LIMIT 1')
-    user = cursor.fetchone()
-
-    # కస్టమర్ అకౌంట్ కోసం అతను పోస్ట్ చేసిన యాడ్స్ తీసుకోవడం
+    # లాగిన్ అయిన యూజర్ డేటా తీసుకోవడం
+    user_contact = request.cookies.get('user_contact')
+    user = None
     my_ads = []
-    if user:
-        cursor.execute('SELECT id, title, price, image_url FROM products WHERE seller_contact = ? ORDER BY id DESC', (user[1],))
-        my_ads = cursor.fetchall()
+    
+    if user_contact:
+        cursor.execute('SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT 1', (user_contact,))
+        user = cursor.fetchone()
+        if user:
+            # కేవలం ఆ యూజర్ పోస్ట్ చేసిన యాడ్స్ మాత్రమే తీసుకోవడం
+            cursor.execute('SELECT id, title, price, image_url FROM products WHERE seller_contact = ? ORDER BY id DESC', (user_contact,))
+            my_ads = cursor.fetchall()
 
     conn.close()
 
@@ -88,8 +93,8 @@ def index():
             body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; padding-bottom: 70px; }
             .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
             
-            /* మల్టీ కలర్ లోగో */
-            .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 5px; }
+            /* మల్టీ కలర్ లోగో (Multi-color Animated Gradient Logo) */
+            .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
             
             .search-container { background: white; padding: 10px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
             .location-bar, .search-bar { display: flex; gap: 8px; align-items: center; border: 2px solid #002f34; border-radius: 4px; padding: 8px; }
@@ -129,7 +134,7 @@ def index():
     <body>
 
         <div class="header">
-            <div class="logo-text">🎨 Sell & Buy</div>
+            <div class="logo-text">⚡ Sell & Buy 🚀</div>
             <span style="font-size: 13px;">📍 Hyderabad</span>
         </div>
 
@@ -236,7 +241,7 @@ def index():
                     <label style="font-size: 12px; font-weight: bold;">ఫోటో:</label>
                     <input type="file" name="file" required style="border:none;">
 
-                    <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్:</label>
+                    <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్ (లాగిన్ నంబర్ ఇవ్వండి):</label>
                     <input type="text" name="seller_contact" required placeholder="Mobile Number">
                     
                     <button type="submit">పోస్ట్ చేయండి</button>
@@ -253,23 +258,30 @@ def index():
             </div>
         </div>
 
-        <!-- My Ads Modal (అమ్ముడైపోయినవి డిలీట్ చేయడానికి ఆప్షన్) -->
+        <!-- My Ads Modal (లాగిన్ అయిన యూజర్ పోస్ట్ చేసినవి మాత్రమే డిలీట్ చేసుకోవడానికి) -->
         <div id="adsModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('adsModal')">&times;</span>
                 <h3>My Ads & Delete Options</h3>
-                <p style="color: #666; font-size: 13px;">మీరు అమ్ముడైపోయిన వస్తువులను ఇక్కడ డిలీట్ చేయవచ్చు:</p>
-                {% if my_ads %}
-                    {% for ad in my_ads %}
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 8px 0;">
-                            <div>
-                                <b>{{ ad[1] }}</b><br><span style="font-size: 12px; color: green;">₹ {{ ad[2] }}</span>
+                {% if user %}
+                    <p style="color: #666; font-size: 13px;">మీరు పోస్ట్ చేసిన ప్రకటనలు (అమ్ముడైతే ఇక్కడ డిలీట్ చేయవచ్చు):</p>
+                    {% if my_ads %}
+                        {% for ad in my_ads %}
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 8px 0;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <img src="{{ ad[3] }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                    <div>
+                                        <b>{{ ad[1] }}</b><br><span style="font-size: 12px; color: green;">₹ {{ ad[2] }}</span>
+                                    </div>
+                                </div>
+                                <a href="/delete_ad/{{ ad[0] }}" style="background: #d9534f; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px;">Delete</a>
                             </div>
-                            <a href="/delete_ad/{{ ad[0] }}" style="background: #d9534f; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px;">Delete</a>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
+                    {% else %}
+                        <p style="color: #888; font-size: 13px;">మీరు ఇంకా ఎలాంటి యాడ్స్ పోస్ట్ చేయలేదు.</p>
+                    {% endif %}
                 {% else %}
-                    <p style="color: #888; font-size: 13px;">మీరు ఎలాంటి యాడ్స్ పోస్ట్ చేయలేదు లేదా లాగిన్ అవ్వలేదు.</p>
+                    <p style="color: #d9534f; font-size: 13px; font-weight: bold;">దయచేసి ముందుగా అకౌంట్ సెక్షన్‌లో లాగిన్ అవ్వండి!</p>
                 {% endif %}
             </div>
         </div>
@@ -290,7 +302,7 @@ def index():
                         <b>⚙️ అకౌంట్ సెట్టింగ్స్:</b><br>
                         - నోటిఫికేషన్స్: ఆన్ (On)<br>
                         - ప్రైవసీ & సెక్యూరిటీ: సురక్షితం (Secure)<br>
-                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: యాక్టివ్
+                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: యాక్టివ్ (Active) 🔒
                     </div>
                     <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
                 {% else %}
@@ -302,7 +314,7 @@ def index():
                         <label style="font-size: 12px;">WhatsApp నంబర్ లేదా Email:</label>
                         <input type="text" name="contact" required placeholder="Mobile / Email">
                         
-                        <button type="submit">WhatsApp కి OTP పంపు</button>
+                        <button type="submit">లాగిన్ అవ్వండి</button>
                     </form>
                 {% endif %}
             </div>
@@ -446,21 +458,22 @@ def send_otp():
     name = request.form.get('name')
     contact = request.form.get('contact')
     joined_date = datetime.now().strftime("%d-%m-%Y")
+    
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO users (name, contact, joined_date) VALUES (?, ?, ?)', (name, contact, joined_date))
+    cursor.execute('INSERT OR IGNORE INTO users (name, contact, joined_date) VALUES (?, ?, ?)', (name, contact, joined_date))
     conn.commit()
     conn.close()
-    return redirect(url_for('index'))
+    
+    resp = redirect(url_for('index'))
+    resp.set_cookie('user_contact', contact, max_age=60*60*24*30) # 30 రోజులు కుకీ సేవ్ అవుతుంది
+    return resp
 
 @app.route('/logout')
 def logout():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM users')
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index'))
+    resp = redirect(url_for('index'))
+    resp.delete_cookie('user_contact')
+    return resp
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)
