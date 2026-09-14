@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_safe'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -46,6 +46,14 @@ def init_db():
 
 init_db()
 
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Content-Security-Policy'] = "default-src 'self' https: 'unsafe-inline' 'unsafe-eval';"
+    return response
+
 @app.route('/')
 def index():
     cat_filter = request.args.get('category')
@@ -61,6 +69,13 @@ def index():
     
     cursor.execute('SELECT name, contact, joined_date FROM users LIMIT 1')
     user = cursor.fetchone()
+
+    # కస్టమర్ పోస్ట్ చేసిన యాడ్స్ తీసుకోవడం
+    my_ads = []
+    if user:
+        cursor.execute('SELECT id, title, price, image_url FROM products WHERE seller_contact = ? ORDER BY id DESC', (user[1],))
+        my_ads = cursor.fetchall()
+
     conn.close()
 
     html_content = '''
@@ -72,7 +87,7 @@ def index():
         <style>
             body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; padding-bottom: 70px; }
             .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
-            .header h2 { margin: 0; font-size: 20px; color: #ffce32; }
+            .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 5px; }
             
             .search-container { background: white; padding: 10px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
             .location-bar, .search-bar { display: flex; gap: 8px; align-items: center; border: 2px solid #002f34; border-radius: 4px; padding: 8px; }
@@ -90,7 +105,7 @@ def index():
             
             .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 15px; }
             .product-card { background: white; border: 1px solid #ebeeef; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; color: inherit; display: block; }
-            .product-card img { width: 100%; height: 160px; object-fit: cover; }
+            .product-card img { width: 100%; height: 150px; object-fit: cover; background: #eee; }
             .product-info { padding: 10px; }
             .price { font-size: 18px; font-weight: bold; color: #002f34; margin: 4px 0; }
             .title { font-size: 14px; color: #333; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -103,7 +118,7 @@ def index():
             .sell-btn-nav { background: #ffce32; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin-top: -15px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); color: #002f34; }
 
             .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
-            .modal-content { background: white; margin: 15% auto; padding: 20px; width: 85%; max-width: 400px; border-radius: 8px; position: relative; }
+            .modal-content { background: white; margin: 10% auto; padding: 20px; width: 85%; max-width: 400px; border-radius: 8px; position: relative; }
             .close { float: right; font-size: 22px; cursor: pointer; font-weight: bold; color: #333; }
             .modal input, .modal select, .modal textarea { width: 100%; padding: 8px; margin: 5px 0 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
             .modal button { background: #002f34; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 5px; }
@@ -112,7 +127,7 @@ def index():
     <body>
 
         <div class="header">
-            <h2>Sell & Buy</h2>
+            <div class="logo-text">🎨 Sell & Buy</div>
             <span style="font-size: 13px;">📍 Hyderabad</span>
         </div>
 
@@ -154,7 +169,7 @@ def index():
             {% if products %}
                 {% for p in products %}
                     <a href="/product/{{ p[0] }}" class="product-card">
-                        <img src="{{ p[7] }}" alt="Item" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x150?text=No+Image';">
+                        <img src="{{ p[7] }}" alt="Item" onerror="this.src='https://via.placeholder.com/300x150?text=Image+Loading';">
                         <div class="product-info">
                             <div class="price">₹ {{ p[4] }}</div>
                             <div class="title">{{ p[1] }} ({{ p[2] }})</div>
@@ -240,8 +255,20 @@ def index():
         <div id="adsModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('adsModal')">&times;</span>
-                <h3>My Ads</h3>
-                <p style="color: #666; font-size: 14px;">మీరు పోస్ట్ చేసిన ప్రకటనలు మరియు హిస్టరీ ఇక్కడ ఉంటుంది.</p>
+                <h3>My Ads & Delete Options</h3>
+                <p style="color: #666; font-size: 13px;">మీరు అమ్ముడైపోయిన వస్తువులను ఇక్కడ డిలీట్ చేయవచ్చు:</p>
+                {% if my_ads %}
+                    {% for ad in my_ads %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 8px 0;">
+                            <div>
+                                <b>{ad[1]}</b><br><span style="font-size: 12px; color: green;">₹ {ad[2]}</span>
+                            </div>
+                            <a href="/delete_ad/{{ ad[0] }}" style="background: #d9534f; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px;">Delete</a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: #888; font-size: 13px;">మీరు ఎలాంటి యాడ్స్ పోస్ట్ చేయలేదు.</p>
+                {% endif %}
             </div>
         </div>
 
@@ -249,13 +276,19 @@ def index():
         <div id="accountModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('accountModal')">&times;</span>
-                <h3>Customer Profile & Account</h3>
+                <h3>Customer Profile & Settings</h3>
                 {% if user %}
                     <div style="text-align: center; margin-bottom: 15px;">
                         <div style="font-size: 50px;">👤</div>
                         <h4 style="margin: 5px 0;">{{ user[0] }}</h4>
                         <p style="font-size: 12px; color: #666; margin: 0;">📱/✉️ {{ user[1] }}</p>
                         <p style="font-size: 11px; color: #888; margin-top: 5px;">జాయిన్ అయిన తేదీ: {{ user[2] }}</p>
+                    </div>
+                    <div style="background: #f1f1f1; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px;">
+                        <b>⚙️ అకౌంట్ సెట్టింగ్స్:</b><br>
+                        - నోటిఫికేషన్స్: ఆన్ (On)<br>
+                        - ప్రైవసీ & సెక్యూరిటీ: సురక్షితం (Secure)<br>
+                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: యాక్టివ్
                     </div>
                     <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
                 {% else %}
@@ -280,7 +313,7 @@ def index():
     </body>
     </html>
     '''
-    return render_template_string(html_content, products=products, user=user)
+    return render_template_string(html_content, products=products, user=user, my_ads=my_ads)
 
 # ప్రొడక్ట్ పూర్తి వివరాలు చూపించే ఫుల్ పేజీ రూట్
 @app.route('/product/<int:product_id>')
@@ -305,7 +338,7 @@ def product_detail(product_id):
             .header {{ background: #002f34; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 15px; }}
             .header a {{ color: #ffce32; text-decoration: none; font-size: 20px; }}
             .container {{ padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }}
-            .prod-img {{ width: 100%; height: 280px; object-fit: cover; border-radius: 8px; }}
+            .prod-img {{ width: 100%; height: 280px; object-fit: cover; border-radius: 8px; background: #eee; }}
             .price {{ font-size: 24px; font-weight: bold; color: #002f34; margin: 10px 0; }}
             .title {{ font-size: 20px; font-weight: bold; margin: 5px 0; }}
             .details-box {{ background: #f9f9f9; padding: 12px; border-radius: 6px; margin: 15px 0; border: 1px solid #eee; }}
@@ -320,7 +353,7 @@ def product_detail(product_id):
         </div>
 
         <div class="container">
-            <img src="{p[7]}" class="prod-img" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x280?text=No+Image';">
+            <img src="{p[7]}" class="prod-img" onerror="this.src='https://via.placeholder.com/400x280?text=No+Image';">
             <div class="price">₹ {p[4]}</div>
             <div class="title">{p[1]}</div>
             
@@ -384,7 +417,6 @@ def upload_file():
             file.filename,
             ExtraArgs={"ContentType": file.content_type}
         )
-        # పూర్తి పబ్లిక్ S3 ఇమేజ్ URL ఫార్మాట్
         image_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file.filename}"
         
         conn = sqlite3.connect('database.db')
@@ -396,6 +428,16 @@ def upload_file():
         return redirect(url_for('index'))
     except Exception as e:
         return f"ఎర్రర్ వచ్చింది: {str(e)}"
+
+# యాడ్ డిలీట్ చేసే రూట్ (అమ్మకమైపోయినప్పుడు)
+@app.route('/delete_ad/<int:ad_id>')
+def delete_ad(ad_id):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM products WHERE id = ?', (ad_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('index'))
 
 @app.route('/send_otp', methods=['POST'])
 def send_otp():
