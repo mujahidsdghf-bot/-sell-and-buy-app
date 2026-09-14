@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_fix'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_fix_v2'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -69,18 +69,18 @@ def index():
     
     user_contact = request.cookies.get('user_contact')
     user = None
+    my_ads = []
     
     if user_contact:
         cursor.execute('SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT 1', (user_contact,))
         user = cursor.fetchone()
-
-    # ఇక్కడ మార్పు: లాగిన్ అయిన యూజర్‌కి సులువుగా ఉండేందుకు పోస్ట్ చేసిన అన్నీ యాడ్స్ "My Ads" లో కనిపిస్తాయి
-    cursor.execute('SELECT id, title, price, image_url FROM products ORDER BY id DESC')
-    my_ads = cursor.fetchall()
+        # డేటాబేస్ నుంచి అన్నీ యాడ్స్ తెచ్చి My Ads లో చూపించేలా సింపుల్ సెటప్
+        cursor.execute('SELECT id, title, price, image_url FROM products ORDER BY id DESC')
+        my_ads = cursor.fetchall()
 
     conn.close()
 
-    html_content = '''
+    html_content = """
     <!DOCTYPE html>
     <html>
     <head>
@@ -89,24 +89,17 @@ def index():
         <style>
             body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; padding-bottom: 70px; }
             .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
-            
-            /* మల్టీ కలర్ లోగో */
             .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-            
             .search-container { background: white; padding: 10px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
             .location-bar, .search-bar { display: flex; gap: 8px; align-items: center; border: 2px solid #002f34; border-radius: 4px; padding: 8px; }
             .location-bar input, .search-bar input { width: 100%; border: none; outline: none; font-size: 14px; }
-            
             .top-ad-banner { background: #ffce32; color: #002f34; padding: 10px; text-align: center; font-weight: bold; font-size: 13px; border-bottom: 1px solid #e0b825; }
-
             .categories { padding: 15px; background: white; margin-top: 5px; }
             .categories h3 { font-size: 16px; margin-bottom: 10px; }
             .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
             .cat-item { background: #ebeeef; padding: 12px 5px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; color: #002f34; display: block; }
             .cat-item:hover { background: #002f34; color: white; }
-            
             .section-title { padding: 15px 15px 5px 15px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-            
             .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 15px; }
             .product-card { background: white; border: 1px solid #ebeeef; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; color: inherit; display: block; }
             .product-card img { width: 100%; height: 150px; object-fit: cover; background: #eee; }
@@ -114,13 +107,10 @@ def index():
             .price { font-size: 18px; font-weight: bold; color: #002f34; margin: 4px 0; }
             .title { font-size: 14px; color: #333; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .loc { font-size: 11px; color: #777; margin-top: 3px; }
-
             .ad-banner-box { grid-column: span 2; background: #002f34; color: #ffce32; padding: 15px; text-align: center; font-weight: bold; border-radius: 6px; margin: 5px 0; border: 1px dashed #ffce32; }
-
             .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #ddd; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); z-index: 99; }
             .nav-item { text-align: center; font-size: 11px; color: #555; text-decoration: none; cursor: pointer; }
             .sell-btn-nav { background: #ffce32; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin-top: -15px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); color: #002f34; }
-
             .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
             .modal-content { background: white; margin: 10% auto; padding: 20px; width: 85%; max-width: 400px; border-radius: 8px; position: relative; }
             .close { float: right; font-size: 22px; cursor: pointer; font-weight: bold; color: #333; }
@@ -255,7 +245,7 @@ def index():
             </div>
         </div>
 
-        <!-- My Ads Modal -->
+        <!-- My Ads Modal (ఇక్కడ డిలీట్ ఆప్షన్ ఉంటుంది) -->
         <div id="adsModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('adsModal')">&times;</span>
@@ -323,7 +313,7 @@ def index():
         </script>
     </body>
     </html>
-    '''
+    """
     return render_template_string(html_content, products=products, user=user, my_ads=my_ads)
 
 @app.route('/product/<int:product_id>')
