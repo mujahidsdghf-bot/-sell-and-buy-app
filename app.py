@@ -1,16 +1,11 @@
-from flask import Flask, render_template_string, request, redirect, url_for, session
+from flask import Flask, render_template_string, request, redirect, url_for
 import boto3
 import sqlite3
 from datetime import datetime
 import random
-from twilio.rest import Client
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_otp_flow'
-
-TWILIO_ACCOUNT_SID = 'AC2f4c5f7922c852e68b8eeaac4f5dd03a'
-TWILIO_AUTH_TOKEN = '2b6d6eed8daf347db44006f36571d7a8'
-TWILIO_WHATSAPP_NUMBER = 'whatsapp:+14155238886'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_instant_otp'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -282,7 +277,7 @@ def index():
                         <label style="font-size: 12px;">10 అంకెల మొబైల్ నంబర్:</label>
                         <input type="text" name="contact" required placeholder="ఉదా: 9177411712" maxlength="10">
                         
-                        <button type="submit" style="background: #25d366; color: white; font-weight: bold;">WhatsApp కి OTP పంపు</button>
+                        <button type="submit" style="background: #25d366; color: white; font-weight: bold;">WhatsApp OTP కోడ్ తీసుకోండి</button>
                     </form>
                 {% endif %}
             </div>
@@ -309,25 +304,28 @@ def index():
 
 @app.route('/verify_otp_page')
 def verify_otp_page():
-    verify_html = """
+    otp_val = request.args.get('code', '1234')
+    verify_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <title>OTP Verification - Sell & Buy</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body { font-family: Arial, sans-serif; background-color: #f7f8f9; color: #002f34; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-            .box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 90%; max-width: 350px; text-align: center; }
-            input { width: 100%; padding: 10px; margin: 10px 0; font-size: 18px; text-align: center; letter-spacing: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-            button { background: #25d366; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; font-size: 15px; cursor: pointer; }
+            body {{ font-family: Arial, sans-serif; background-color: #f7f8f9; color: #002f34; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }}
+            .box {{ background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 90%; max-width: 350px; text-align: center; }}
+            input {{ width: 100%; padding: 10px; margin: 10px 0; font-size: 20px; text-align: center; letter-spacing: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }}
+            button {{ background: #25d366; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; font-size: 15px; cursor: pointer; }}
         </style>
     </head>
     <body>
         <div class="box">
-            <h3 style="color: #075e54; margin-top: 0;">WhatsApp OTP ఎంటర్ చేయండి</h3>
-            <p style="font-size: 13px; color: #666;">మీ WhatsApp నంబర్‌కు పంపబడిన 4 అంకెల కోడ్‌ని ఇక్కడ రాయండి.</p>
+            <h3 style="color: #075e54; margin-top: 0;">WhatsApp OTP వెరిఫికేషన్</h3>
+            <p style="font-size: 13px; color: #666;">మీ సురక్షితమైన OTP కోడ్: <b style="color: #d9534f; font-size: 18px;">{otp_val}</b></p>
+            <p style="font-size: 12px; color: #888;">(ఈ కోడ్‌ని క్రింద ఎంటర్ చేసి లాగిన్ అవ్వండి)</p>
             <form action="/verify_otp" method="POST">
                 <input type="text" name="entered_otp" required placeholder="XXXX" maxlength="4">
+                <input type="hidden" name="actual_otp" value="{otp_val}">
                 <button type="submit">వెరిఫై చేసి లాగిన్ అవ్వండి</button>
             </form>
         </div>
@@ -339,11 +337,11 @@ def verify_otp_page():
 @app.route('/verify_otp', methods=['POST'])
 def verify_otp():
     entered = request.form.get('entered_otp')
-    saved_otp = request.cookies.get('temp_otp')
+    actual = request.form.get('actual_otp')
     name = request.cookies.get('temp_name')
     contact = request.cookies.get('temp_contact')
 
-    if entered == saved_otp:
+    if entered == actual:
         joined_date = datetime.now().strftime("%d-%m-%Y")
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
@@ -355,7 +353,7 @@ def verify_otp():
         resp.set_cookie('user_contact', contact, max_age=60*60*24*30)
         return resp
     else:
-        return "<script>alert('తప్పు OTP! దయచేసి మళ్లీ ప్రయత్నించండి.'); window.location.href='/';</script>"
+        return "<script>alert('తప్పు OTP! దయచేసి సరైన కోడ్ ఎంటర్ చేయండి.'); window.location.href='/';</script>"
 
 @app.route('/my_ads')
 def my_ads_page():
@@ -549,19 +547,8 @@ def send_otp():
 
     otp_code = str(random.randint(1000, 9999))
     
-    try:
-        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        message = client.messages.create(
-            from_=TWILIO_WHATSAPP_NUMBER,
-            body=f"హలో {name}! Sell & Buy యాప్ వెరిఫికేషన్ కోడ్ (OTP): *{otp_code}*",
-            to=f"whatsapp:{contact}"
-        )
-    except Exception as e:
-        print(f"Twilio ఎర్రర్: {e}")
-
-    # OTP మరియు యూజర్ వివరాలను తాత్కాలికంగా కుకీలలో భద్రపరుస్తాం
-    resp = redirect(url_for('verify_otp_page'))
-    resp.set_cookie('temp_otp', otp_code, max_age=300)
+    # ఆటోమేటిక్‌గా వెరిఫై పేజీకి వెళ్తుంది, అక్కడ OTP స్పష్టంగా కనిపిస్తుంది
+    resp = redirect(url_for('verify_otp_page', code=otp_code))
     resp.set_cookie('temp_name', name, max_age=300)
     resp.set_cookie('temp_contact', contact, max_age=300)
     return resp
