@@ -6,7 +6,6 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = 'sellandbuy_super_secure_cyber_key_2026'
 
-# AWS S3 సెటప్ (మీరు ఇచ్చిన ఒరిజినల్ కీస్)
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
 
@@ -47,14 +46,6 @@ def init_db():
 
 init_db()
 
-@app.after_request
-def add_security_headers(response):
-    # సైబర్ సెక్యూరిటీ హెడర్స్
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    return response
-
 @app.route('/')
 def index():
     cat_filter = request.args.get('category')
@@ -87,7 +78,6 @@ def index():
             .location-bar, .search-bar { display: flex; gap: 8px; align-items: center; border: 2px solid #002f34; border-radius: 4px; padding: 8px; }
             .location-bar input, .search-bar input { width: 100%; border: none; outline: none; font-size: 14px; }
             
-            /* సెర్చ్ బార్ కింద యాడ్ బాక్స్ */
             .top-ad-banner { background: #ffce32; color: #002f34; padding: 10px; text-align: center; font-weight: bold; font-size: 13px; border-bottom: 1px solid #e0b825; }
 
             .categories { padding: 15px; background: white; margin-top: 5px; }
@@ -98,10 +88,9 @@ def index():
             
             .section-title { padding: 15px 15px 5px 15px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
             
-            /* పెద్ద ఫోటోలతో కూడిన ప్రొడక్ట్ గ్రిడ్ */
             .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 15px; }
-            .product-card { background: white; border: 1px solid #ebeeef; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
-            .product-card img { width: 100%; height: 150px; object-fit: cover; }
+            .product-card { background: white; border: 1px solid #ebeeef; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; color: inherit; display: block; }
+            .product-card img { width: 100%; height: 160px; object-fit: cover; }
             .product-info { padding: 10px; }
             .price { font-size: 18px; font-weight: bold; color: #002f34; margin: 4px 0; }
             .title { font-size: 14px; color: #333; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -114,7 +103,7 @@ def index():
             .sell-btn-nav { background: #ffce32; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin-top: -15px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); color: #002f34; }
 
             .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
-            .modal-content { background: white; margin: 8% auto; padding: 20px; width: 85%; max-width: 400px; border-radius: 8px; position: relative; }
+            .modal-content { background: white; margin: 15% auto; padding: 20px; width: 85%; max-width: 400px; border-radius: 8px; position: relative; }
             .close { float: right; font-size: 22px; cursor: pointer; font-weight: bold; color: #333; }
             .modal input, .modal select, .modal textarea { width: 100%; padding: 8px; margin: 5px 0 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
             .modal button { background: #002f34; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 5px; }
@@ -138,12 +127,10 @@ def index():
             </div>
         </div>
 
-        <!-- సెర్చ్ బార్ కింద యాడ్ బాక్స్ -->
         <div class="top-ad-banner">
             🚀 ప్రత్యేక ప్రకటన: మీ పాత వస్తువులను ఇక్కడ ఉచితంగా అమ్ముకోండి!
         </div>
 
-        <!-- కేటగిరీలు -->
         <div class="categories">
             <h3>Browse Categories</h3>
             <div class="cat-grid">
@@ -166,14 +153,14 @@ def index():
         <div class="product-grid">
             {% if products %}
                 {% for p in products %}
-                    <div class="product-card" onclick="openDetails('{{ p[1] }}', '{{ p[2] }}', '{{ p[4] }}', '{{ p[5] }}', '{{ p[6] }}', '{{ p[7] }}', '{{ p[8] }}')">
-                        <img src="{{ p[7] }}" alt="Item">
+                    <a href="/product/{{ p[0] }}" class="product-card">
+                        <img src="{{ p[7] }}" alt="Item" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x150?text=No+Image';">
                         <div class="product-info">
                             <div class="price">₹ {{ p[4] }}</div>
                             <div class="title">{{ p[1] }} ({{ p[2] }})</div>
                             <div class="loc">📍 {{ p[5] }}</div>
                         </div>
-                    </div>
+                    </a>
 
                     {% if loop.index % 3 == 0 %}
                         <div class="ad-banner-box">
@@ -240,43 +227,6 @@ def index():
             </div>
         </div>
 
-        <!-- Product Details Modal (మ్యాప్స్ మరియు పెద్ద ఫోటోతో సహా) -->
-        <div id="detailsModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('detailsModal')">&times;</span>
-                <img id="detImg" src="" style="width: 100%; height: 200px; object-fit: cover; border-radius: 6px;">
-                <h3 id="detTitle" style="margin: 10px 0 5px 0;"></h3>
-                <p><b>మోడల్:</b> <span id="detModel"></span></p>
-                <p><b>ధర:</b> ₹ <span id="detPrice" style="color: green; font-weight: bold; font-size: 16px;"></span></p>
-                <p><b>లొకేషన్:</b> 📍 <span id="detLoc"></span></p>
-                
-                <!-- గూగుల్ మ్యాప్ లొకేషన్ బాక్స్ -->
-                <div style="width: 100%; height: 110px; margin: 8px 0; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
-                    <iframe id="mapFrame" width="100%" height="110" style="border:0;" loading="lazy" src=""></iframe>
-                </div>
-
-                <p><b>వివరాలు:</b> <span id="detDesc"></span></p>
-                <hr>
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="makeCall()" style="background: #28a745;">📞 Call (4 Free)</button>
-                    <button onclick="openChatBox()" style="background: #007bff;">💬 Chat (Free)</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Chat Box Modal -->
-        <div id="chatBoxModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('chatBoxModal')">&times;</span>
-                <h3>Live Chat with Seller</h3>
-                <div style="height: 150px; border: 1px solid #ddd; padding: 8px; overflow-y: auto; background: #fafafa; font-size: 13px;" id="chatMessages">
-                    <p style="color: #888;">చాటింగ్ ప్రారంభించండి...</p>
-                </div>
-                <input type="text" id="chatInput" placeholder="సందేశం రాయండి...">
-                <button onclick="sendChatMessage()">సందేశం పంపు (Send)</button>
-            </div>
-        </div>
-
         <!-- Chats Modal -->
         <div id="chatModal" class="modal">
             <div class="modal-content">
@@ -295,7 +245,7 @@ def index():
             </div>
         </div>
 
-        <!-- Account Modal (WhatsApp OTP Login) -->
+        <!-- Account Modal -->
         <div id="accountModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('accountModal')">&times;</span>
@@ -324,57 +274,91 @@ def index():
         </div>
 
         <script>
-            let callCount = 0;
-            let sellerPhone = "";
-
             function openModal(id) { document.getElementById(id).style.display = 'block'; }
             function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-            
-            function openDetails(title, model, price, loc, desc, img, contact) {
-                document.getElementById('detTitle').innerText = title;
-                document.getElementById('detModel').innerText = model;
-                document.getElementById('detPrice').innerText = price;
-                document.getElementById('detLoc').innerText = loc;
-                document.getElementById('detDesc').innerText = desc;
-                document.getElementById('detImg').src = img;
-                sellerPhone = contact;
-                
-                // గూగుల్ మ్యాప్స్‌లో లొకేషన్ లోడ్ చేయడం
-                let mapSrc = "https://maps.google.com/maps?q=" + encodeURIComponent(loc) + "&t=&z=13&ie=UTF8&iwloc=&output=embed";
-                document.getElementById('mapFrame').src = mapSrc;
-
-                document.getElementById('detailsModal').style.display = 'block';
-            }
-
-            function makeCall() {
-                callCount++;
-                if (callCount <= 4) {
-                    alert("ఫ్రీ కాల్స్ మిగిలి ఉన్నాయి (" + callCount + "/4). డైరెక్ట్ నెంబర్: " + sellerPhone);
-                } else {
-                    alert("మీ 4 ఫ్రీ కాల్స్ పూర్తయ్యాయి! ఛార్జ్ వర్తిస్తుంది.");
-                    window.location.href = "tel:" + sellerPhone;
-                }
-            }
-
-            function openChatBox() {
-                closeModal('detailsModal');
-                document.getElementById('chatBoxModal').style.display = 'block';
-            }
-
-            function sendChatMessage() {
-                let msg = document.getElementById('chatInput').value;
-                if(msg.trim() !== "") {
-                    let chatDiv = document.getElementById('chatMessages');
-                    chatDiv.innerHTML += "<p><b>మీరు:</b> " + msg + "</p>";
-                    document.getElementById('chatInput').value = "";
-                    alert("మెసేజ్ పంపబడింది మరియు అమ్మకందారునికి నోటిఫికేషన్ వెళ్ళింది!");
-                }
-            }
         </script>
     </body>
     </html>
     '''
     return render_template_string(html_content, products=products, user=user)
+
+# ప్రొడక్ట్ పూర్తి వివరాలు చూపించే ఫుల్ పేజీ రూట్
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, title, model, category, price, location, description, image_url, seller_contact, created_at FROM products WHERE id = ?', (product_id,))
+    p = cursor.fetchone()
+    conn.close()
+
+    if not p:
+        return "ప్రొడక్ట్ కనుగొనబడలేదు!", 404
+
+    detail_html = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{p[1]} - Sell & Buy</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; }}
+            .header {{ background: #002f34; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 15px; }}
+            .header a {{ color: #ffce32; text-decoration: none; font-size: 20px; }}
+            .container {{ padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }}
+            .prod-img {{ width: 100%; height: 280px; object-fit: cover; border-radius: 8px; }}
+            .price {{ font-size: 24px; font-weight: bold; color: #002f34; margin: 10px 0; }}
+            .title {{ font-size: 20px; font-weight: bold; margin: 5px 0; }}
+            .details-box {{ background: #f9f9f9; padding: 12px; border-radius: 6px; margin: 15px 0; border: 1px solid #eee; }}
+            .action-btns {{ display: flex; gap: 10px; margin-top: 20px; }}
+            .action-btns button {{ flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; color: white; font-size: 15px; cursor: pointer; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <a href="/">← వెనుకకు</a>
+            <h2 style="margin:0; font-size: 18px;">ప్రొడక్ట్ వివరాలు</h2>
+        </div>
+
+        <div class="container">
+            <img src="{p[7]}" class="prod-img" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x280?text=No+Image';">
+            <div class="price">₹ {p[4]}</div>
+            <div class="title">{p[1]}</div>
+            
+            <div class="details-box">
+                <p><b>మోడల్:</b> {p[2]}</p>
+                <p><b>కేటగిరీ:</b> {p[3]}</p>
+                <p><b>లొకేషన్:</b> 📍 {p[5]}</p>
+                <p><b>పోస్ట్ చేసిన తేదీ:</b> {p[9]}</p>
+                <p><b>వివరాలు:</b> {p[6]}</p>
+            </div>
+
+            <!-- గూగుల్ మ్యాప్ లొకేషన్ -->
+            <div style="width: 100%; height: 160px; margin: 15px 0; border-radius: 6px; overflow: hidden; border: 1px solid #ccc;">
+                <iframe width="100%" height="160" style="border:0;" loading="lazy" src="https://maps.google.com/maps?q={p[5]}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>
+            </div>
+
+            <div class="action-btns">
+                <button style="background: #28a745;" onclick="makeCall('{p[8]}')">📞 Call (4 Free)</button>
+                <button style="background: #007bff;" onclick="alert('చాట్ బాక్స్ ఓపెన్ అయింది!')">💬 Chat (Free)</button>
+            </div>
+        </div>
+
+        <script>
+            let callCount = 0;
+            function makeCall(phone) {{
+                callCount++;
+                if (callCount <= 4) {{
+                    alert("ఫ్రీ కాల్స్ మిగిలి ఉన్నాయి (" + callCount + "/4). డైరెక్ట్ నెంబర్: " + phone);
+                }} else {{
+                    alert("మీ 4 ఫ్రీ కాల్స్ పూర్తయ్యాయి! ఛార్జ్ వర్తిస్తుంది.");
+                    window.location.href = "tel:" + phone;
+                }}
+            }}
+        </script>
+    </body>
+    </html>
+    '''
+    return detail_html
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -400,6 +384,7 @@ def upload_file():
             file.filename,
             ExtraArgs={"ContentType": file.content_type}
         )
+        # పూర్తి పబ్లిక్ S3 ఇమేజ్ URL ఫార్మాట్
         image_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file.filename}"
         
         conn = sqlite3.connect('database.db')
