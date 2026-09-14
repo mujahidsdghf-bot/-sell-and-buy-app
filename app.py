@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_absolute'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_release'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -66,6 +66,14 @@ def index():
         cursor.execute('SELECT id, title, model, category, price, location, description, image_url, seller_contact, created_at FROM products ORDER BY id DESC')
     
     products = cursor.fetchall()
+    
+    user_contact = request.cookies.get('user_contact')
+    user = None
+    
+    if user_contact:
+        cursor.execute('SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT 1', (user_contact,))
+        user = cursor.fetchone()
+
     conn.close()
 
     html_content = """
@@ -77,17 +85,24 @@ def index():
         <style>
             body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; padding-bottom: 70px; }
             .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+            
+            /* మల్టీ కలర్ లోగో */
             .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+            
             .search-container { background: white; padding: 10px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
             .location-bar, .search-bar { display: flex; gap: 8px; align-items: center; border: 2px solid #002f34; border-radius: 4px; padding: 8px; }
             .location-bar input, .search-bar input { width: 100%; border: none; outline: none; font-size: 14px; }
+            
             .top-ad-banner { background: #ffce32; color: #002f34; padding: 10px; text-align: center; font-weight: bold; font-size: 13px; border-bottom: 1px solid #e0b825; }
+
             .categories { padding: 15px; background: white; margin-top: 5px; }
             .categories h3 { font-size: 16px; margin-bottom: 10px; }
             .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
             .cat-item { background: #ebeeef; padding: 12px 5px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; color: #002f34; display: block; }
             .cat-item:hover { background: #002f34; color: white; }
+            
             .section-title { padding: 15px 15px 5px 15px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+            
             .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 15px; }
             .product-card { background: white; border: 1px solid #ebeeef; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; color: inherit; display: block; }
             .product-card img { width: 100%; height: 150px; object-fit: cover; background: #eee; }
@@ -95,10 +110,13 @@ def index():
             .price { font-size: 18px; font-weight: bold; color: #002f34; margin: 4px 0; }
             .title { font-size: 14px; color: #333; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .loc { font-size: 11px; color: #777; margin-top: 3px; }
+
             .ad-banner-box { grid-column: span 2; background: #002f34; color: #ffce32; padding: 15px; text-align: center; font-weight: bold; border-radius: 6px; margin: 5px 0; border: 1px dashed #ffce32; }
+
             .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #ddd; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); z-index: 99; }
             .nav-item { text-align: center; font-size: 11px; color: #555; text-decoration: none; cursor: pointer; }
             .sell-btn-nav { background: #ffce32; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin-top: -15px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); color: #002f34; }
+
             .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
             .modal-content { background: white; margin: 10% auto; padding: 20px; width: 85%; max-width: 400px; border-radius: 8px; position: relative; }
             .close { float: right; font-size: 22px; cursor: pointer; font-weight: bold; color: #333; }
@@ -217,7 +235,7 @@ def index():
                     <input type="file" name="file" required style="border:none;">
 
                     <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్:</label>
-                    <input type="text" name="seller_contact" required placeholder="Mobile Number">
+                    <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Mobile Number">
                     
                     <button type="submit">పోస్ట్ చేయండి</button>
                 </form>
@@ -238,16 +256,32 @@ def index():
             <div class="modal-content">
                 <span class="close" onclick="closeModal('accountModal')">&times;</span>
                 <h3>Customer Profile & Settings</h3>
-                <form action="/send_otp" method="POST">
-                    <h4 style="margin-top: 0;">WhatsApp OTP / Email లాగిన్</h4>
-                    <label style="font-size: 12px;">పేరు (Name):</label>
-                    <input type="text" name="name" required>
-                    
-                    <label style="font-size: 12px;">WhatsApp నంబర్ లేదా Email:</label>
-                    <input type="text" name="contact" required placeholder="Mobile / Email">
-                    
-                    <button type="submit">లాగిన్ అవ్వండి</button>
-                </form>
+                {% if user %}
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <div style="font-size: 50px;">👤</div>
+                        <h4 style="margin: 5px 0;">{{ user[0] }}</h4>
+                        <p style="font-size: 12px; color: #666; margin: 0;">📱/✉️ {{ user[1] }}</p>
+                        <p style="font-size: 11px; color: #888; margin-top: 5px;">జాయిన్ అయిన తేదీ: {{ user[2] }}</p>
+                    </div>
+                    <div style="background: #f1f1f1; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px;">
+                        <b>⚙️ అకౌంట్ సెట్టింగ్స్:</b><br>
+                        - నోటిఫికేషన్స్: ఆన్ (On)<br>
+                        - ప్రైవసీ & సెక్యూరిటీ: సురక్షితం (Secure)<br>
+                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: యాక్టివ్ (Active) 🔒
+                    </div>
+                    <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
+                {% else %}
+                    <form action="/send_otp" method="POST">
+                        <h4 style="margin-top: 0;">WhatsApp / Mobile లాగిన్</h4>
+                        <label style="font-size: 12px;">పేరు (Name):</label>
+                        <input type="text" name="name" required>
+                        
+                        <label style="font-size: 12px;">WhatsApp నంబర్:</label>
+                        <input type="text" name="contact" required placeholder="Mobile Number">
+                        
+                        <button type="submit">లాగిన్ అవ్వండి</button>
+                    </form>
+                {% endif %}
             </div>
         </div>
 
@@ -258,9 +292,8 @@ def index():
     </body>
     </html>
     """
-    return render_template_string(html_content, products=products)
+    return render_template_string(html_content, products=products, user=user)
 
-# My Ads కోసం ప్రత్యేకమైన ఫుల్ పేజీ రూట్ (ఇక్కడ డిలీట్ ఆప్షన్ పర్ఫెక్ట్ గా ఉంటుంది)
 @app.route('/my_ads')
 def my_ads_page():
     conn = sqlite3.connect('database.db')
@@ -269,21 +302,21 @@ def my_ads_page():
     ads = cursor.fetchall()
     conn.close()
 
-    ads_html = f"""
+    ads_html = """
     <!DOCTYPE html>
     <html>
     <head>
         <title>My Ads - Sell & Buy</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; }}
-            .header {{ background: #002f34; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 15px; }}
-            .header a {{ color: #ffce32; text-decoration: none; font-size: 20px; }}
-            .container {{ padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }}
-            .ad-item {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 10px 0; }}
-            .ad-info {{ display: flex; gap: 12px; align-items: center; }}
-            .ad-info img {{ width: 50px; height: 50px; object-fit: cover; border-radius: 6px; background: #eee; }}
-            .delete-btn {{ background: #d9534f; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; }}
+            body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; }
+            .header { background: #002f34; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 15px; }
+            .header a { color: #ffce32; text-decoration: none; font-size: 20px; }
+            .container { padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }
+            .ad-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 10px 0; }
+            .ad-info { display: flex; gap: 12px; align-items: center; }
+            .ad-info img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; background: #eee; }
+            .delete-btn { background: #d9534f; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; }
         </style>
     </head>
     <body>
