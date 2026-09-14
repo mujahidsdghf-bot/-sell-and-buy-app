@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_pro_max'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_pro_max_final'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -67,7 +67,6 @@ def index():
     
     products = cursor.fetchall()
     
-    # కుకీ ద్వారా లాగిన్ అయిన యూజర్ నంబర్ తీసుకోవడం
     user_contact = request.cookies.get('user_contact')
     user = None
     my_ads = []
@@ -76,7 +75,6 @@ def index():
         cursor.execute('SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT 1', (user_contact,))
         user = cursor.fetchone()
         if user:
-            # కేవలం ఈ లాగిన్ నంబర్‌తో పోస్ట్ చేసిన యాడ్స్ మాత్రమే "My Ads" లో కనిపిస్తాయి
             cursor.execute('SELECT id, title, price, image_url FROM products WHERE seller_contact = ? ORDER BY id DESC', (user_contact,))
             my_ads = cursor.fetchall()
 
@@ -240,8 +238,7 @@ def index():
                     <label style="font-size: 12px; font-weight: bold;">ఫోటో:</label>
                     <input type="file" name="file" required style="border:none;">
 
-                    <!-- లాగిన్ అయి ఉన్న యూజర్ నంబర్ ఆటోమేటిక్‌గా వస్తుంది -->
-                    <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్:</label>
+                    <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్ (లాగిన్ నంబర్ ఇవ్వండి):</label>
                     <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Mobile Number">
                     
                     <button type="submit">పోస్ట్ చేయండి</button>
@@ -258,27 +255,27 @@ def index():
             </div>
         </div>
 
-        <!-- My Ads Modal (లాగిన్ అయితేనే ఆయన యాడ్స్ ఇక్కడ కనిపిస్తాయి మరియు డిలీట్ చేసుకోవచ్చు) -->
+        <!-- My Ads Modal (ఇక్కడ లాగిన్ అయిన యూజర్ యాడ్స్ మాత్రమే కనిపిస్తాయి మరియు డిలీట్ చేసుకోవచ్చు) -->
         <div id="adsModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('adsModal')">&times;</span>
                 <h3>My Ads & Delete Options</h3>
                 {% if user %}
-                    <p style="color: #666; font-size: 13px;">మీరు పోస్ట్ చేసిన ప్రకటనలు:</p>
+                    <p style="color: #666; font-size: 13px;">మీరు పోస్ట్ చేసిన ప్రకటనలు (అమ్ముడైతే ఇక్కడ డిలీట్ చేయవచ్చు):</p>
                     {% if my_ads %}
                         {% for ad in my_ads %}
                             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 8px 0;">
                                 <div style="display: flex; gap: 10px; align-items: center;">
-                                    <img src="{{ ad[3] }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                    <img src="{{ ad[3] }}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 4px;">
                                     <div>
                                         <b>{{ ad[1] }}</b><br><span style="font-size: 12px; color: green;">₹ {{ ad[2] }}</span>
                                     </div>
                                 </div>
-                                <a href="/delete_ad/{{ ad[0] }}" style="background: #d9534f; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px;">Delete</a>
+                                <a href="/delete_ad/{{ ad[0] }}" style="background: #d9534f; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold;">Delete</a>
                             </div>
                         {% endfor %}
                     {% else %}
-                        <p style="color: #888; font-size: 13px;">మీరు ఈ అకౌంట్ నుండి ఎలాంటి యాడ్స్ పోస్ట్ చేయలేదు.</p>
+                        <p style="color: #888; font-size: 13px;">మీరు ఈ నంబర్‌తో ఎలాంటి యాడ్స్ పోస్ట్ చేయలేదు.</p>
                     {% endif %}
                 {% else %}
                     <p style="color: #d9534f; font-size: 13px; font-weight: bold;">⚠️ దయచేసి ముందుగా అకౌంట్ సెక్షన్‌లో లాగిన్ అవ్వండి!</p>
