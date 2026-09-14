@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_fix_v2'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_absolute'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -66,18 +66,6 @@ def index():
         cursor.execute('SELECT id, title, model, category, price, location, description, image_url, seller_contact, created_at FROM products ORDER BY id DESC')
     
     products = cursor.fetchall()
-    
-    user_contact = request.cookies.get('user_contact')
-    user = None
-    my_ads = []
-    
-    if user_contact:
-        cursor.execute('SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT 1', (user_contact,))
-        user = cursor.fetchone()
-        # డేటాబేస్ నుంచి అన్నీ యాడ్స్ తెచ్చి My Ads లో చూపించేలా సింపుల్ సెటప్
-        cursor.execute('SELECT id, title, price, image_url FROM products ORDER BY id DESC')
-        my_ads = cursor.fetchall()
-
     conn.close()
 
     html_content = """
@@ -189,7 +177,7 @@ def index():
             <a href="/" class="nav-item">🏠<br>Home</a>
             <a href="#" onclick="openModal('chatModal')" class="nav-item">💬<br>Chats</a>
             <a href="#" onclick="openModal('sellModal')" class="sell-btn-nav">+</a>
-            <a href="#" onclick="openModal('adsModal')" class="nav-item">📋<br>My Ads</a>
+            <a href="/my_ads" class="nav-item">📋<br>My Ads</a>
             <a href="#" onclick="openModal('accountModal')" class="nav-item">👤<br>Account</a>
         </div>
 
@@ -229,7 +217,7 @@ def index():
                     <input type="file" name="file" required style="border:none;">
 
                     <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్:</label>
-                    <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Mobile Number">
+                    <input type="text" name="seller_contact" required placeholder="Mobile Number">
                     
                     <button type="submit">పోస్ట్ చేయండి</button>
                 </form>
@@ -245,65 +233,21 @@ def index():
             </div>
         </div>
 
-        <!-- My Ads Modal (ఇక్కడ డిలీట్ ఆప్షన్ ఉంటుంది) -->
-        <div id="adsModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('adsModal')">&times;</span>
-                <h3>My Ads & Delete Options</h3>
-                {% if user %}
-                    <p style="color: #666; font-size: 13px;">మీరు పోస్ట్ చేసిన ప్రకటనలు (అమ్ముడైతే ఇక్కడ డిలీట్ చేయవచ్చు):</p>
-                    {% if my_ads %}
-                        {% for ad in my_ads %}
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 8px 0;">
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <img src="{{ ad[3] }}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 4px;">
-                                    <div>
-                                        <b>{{ ad[1] }}</b><br><span style="font-size: 12px; color: green;">₹ {{ ad[2] }}</span>
-                                    </div>
-                                </div>
-                                <a href="/delete_ad/{{ ad[0] }}" style="background: #d9534f; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold;">Delete</a>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <p style="color: #888; font-size: 13px;">ఇక్కడ ఎలాంటి యాడ్స్ లేవు.</p>
-                    {% endif %}
-                {% else %}
-                    <p style="color: #d9534f; font-size: 13px; font-weight: bold;">⚠️ దయచేసి ముందుగా అకౌంట్ సెక్షన్‌లో లాగిన్ అవ్వండి!</p>
-                {% endif %}
-            </div>
-        </div>
-
         <!-- Account Modal -->
         <div id="accountModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('accountModal')">&times;</span>
                 <h3>Customer Profile & Settings</h3>
-                {% if user %}
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <div style="font-size: 50px;">👤</div>
-                        <h4 style="margin: 5px 0;">{{ user[0] }}</h4>
-                        <p style="font-size: 12px; color: #666; margin: 0;">📱/✉️ {{ user[1] }}</p>
-                        <p style="font-size: 11px; color: #888; margin-top: 5px;">జాయిన్ అయిన తేదీ: {{ user[2] }}</p>
-                    </div>
-                    <div style="background: #f1f1f1; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px;">
-                        <b>⚙️ అకౌంట్ సెట్టింగ్స్:</b><br>
-                        - నోటిఫికేషన్స్: ఆన్ (On)<br>
-                        - ప్రైవసీ & సెక్యూరిటీ: సురక్షితం (Secure)<br>
-                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: యాక్టివ్ (Active) 🔒
-                    </div>
-                    <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
-                {% else %}
-                    <form action="/send_otp" method="POST">
-                        <h4 style="margin-top: 0;">WhatsApp OTP / Email లాగిన్</h4>
-                        <label style="font-size: 12px;">పేరు (Name):</label>
-                        <input type="text" name="name" required>
-                        
-                        <label style="font-size: 12px;">WhatsApp నంబర్ లేదా Email:</label>
-                        <input type="text" name="contact" required placeholder="Mobile / Email">
-                        
-                        <button type="submit">లాగిన్ అవ్వండి</button>
-                    </form>
-                {% endif %}
+                <form action="/send_otp" method="POST">
+                    <h4 style="margin-top: 0;">WhatsApp OTP / Email లాగిన్</h4>
+                    <label style="font-size: 12px;">పేరు (Name):</label>
+                    <input type="text" name="name" required>
+                    
+                    <label style="font-size: 12px;">WhatsApp నంబర్ లేదా Email:</label>
+                    <input type="text" name="contact" required placeholder="Mobile / Email">
+                    
+                    <button type="submit">లాగిన్ అవ్వండి</button>
+                </form>
             </div>
         </div>
 
@@ -314,7 +258,68 @@ def index():
     </body>
     </html>
     """
-    return render_template_string(html_content, products=products, user=user, my_ads=my_ads)
+    return render_template_string(html_content, products=products)
+
+# My Ads కోసం ప్రత్యేకమైన ఫుల్ పేజీ రూట్ (ఇక్కడ డిలీట్ ఆప్షన్ పర్ఫెక్ట్ గా ఉంటుంది)
+@app.route('/my_ads')
+def my_ads_page():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, title, price, image_url, seller_contact FROM products ORDER BY id DESC')
+    ads = cursor.fetchall()
+    conn.close()
+
+    ads_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>My Ads - Sell & Buy</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; }}
+            .header {{ background: #002f34; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 15px; }}
+            .header a {{ color: #ffce32; text-decoration: none; font-size: 20px; }}
+            .container {{ padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }}
+            .ad-item {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 10px 0; }}
+            .ad-info {{ display: flex; gap: 12px; align-items: center; }}
+            .ad-info img {{ width: 50px; height: 50px; object-fit: cover; border-radius: 6px; background: #eee; }}
+            .delete-btn {{ background: #d9534f; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <a href="/">← వెనుకకు</a>
+            <h2 style="margin:0; font-size: 18px;">My Ads & Delete Options</h2>
+        </div>
+
+        <div class="container">
+            <h3>మీరు పోస్ట్ చేసిన ప్రకటనలు:</h3>
+    """
+
+    if ads:
+        for ad in ads:
+            ads_html += f"""
+            <div class="ad-item">
+                <div class="ad-info">
+                    <img src="{ad[3]}" onerror="this.src='https://via.placeholder.com/50x50?text=Img';">
+                    <div>
+                        <b>{ad[1]}</b><br>
+                        <span style="font-size: 13px; color: green; font-weight: bold;">₹ {ad[2]}</span><br>
+                        <span style="font-size: 11px; color: #777;">Contact: {ad[4]}</span>
+                    </div>
+                </div>
+                <a href="/delete_ad/{ad[0]}" class="delete-btn" onclick="return confirm('మీరు ఈ యాడ్ ని డిలీట్ చేయాలనుకుంటున్నారా?');">Delete</a>
+            </div>
+            """
+    else:
+        ads_html += "<p style='color: #777;'>ఇక్కడ ఎలాంటి యాడ్స్ లేవు.</p>"
+
+    ads_html += """
+        </div>
+    </body>
+    </html>
+    """
+    return ads_html
 
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
@@ -438,7 +443,7 @@ def delete_ad(ad_id):
     cursor.execute('DELETE FROM products WHERE id = ?', (ad_id,))
     conn.commit()
     conn.close()
-    return redirect(url_for('index'))
+    return redirect(url_for('my_ads_page'))
 
 @app.route('/send_otp', methods=['POST'])
 def send_otp():
