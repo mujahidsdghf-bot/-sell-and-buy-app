@@ -70,7 +70,7 @@ def index():
     cursor.execute('SELECT name, contact, joined_date FROM users LIMIT 1')
     user = cursor.fetchone()
 
-    # కస్టమర్ పోస్ట్ చేసిన యాడ్స్ తీసుకోవడం
+    # కస్టమర్ అకౌంట్ కోసం అతను పోస్ట్ చేసిన యాడ్స్ తీసుకోవడం
     my_ads = []
     if user:
         cursor.execute('SELECT id, title, price, image_url FROM products WHERE seller_contact = ? ORDER BY id DESC', (user[1],))
@@ -87,6 +87,8 @@ def index():
         <style>
             body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; padding-bottom: 70px; }
             .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+            
+            /* మల్టీ కలర్ లోగో */
             .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 5px; }
             
             .search-container { background: white; padding: 10px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
@@ -251,7 +253,7 @@ def index():
             </div>
         </div>
 
-        <!-- My Ads Modal -->
+        <!-- My Ads Modal (అమ్ముడైపోయినవి డిలీట్ చేయడానికి ఆప్షన్) -->
         <div id="adsModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('adsModal')">&times;</span>
@@ -261,13 +263,13 @@ def index():
                     {% for ad in my_ads %}
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 8px 0;">
                             <div>
-                                <b>{ad[1]}</b><br><span style="font-size: 12px; color: green;">₹ {ad[2]}</span>
+                                <b>{{ ad[1] }}</b><br><span style="font-size: 12px; color: green;">₹ {{ ad[2] }}</span>
                             </div>
                             <a href="/delete_ad/{{ ad[0] }}" style="background: #d9534f; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px;">Delete</a>
                         </div>
                     {% endfor %}
                 {% else %}
-                    <p style="color: #888; font-size: 13px;">మీరు ఎలాంటి యాడ్స్ పోస్ట్ చేయలేదు.</p>
+                    <p style="color: #888; font-size: 13px;">మీరు ఎలాంటి యాడ్స్ పోస్ట్ చేయలేదు లేదా లాగిన్ అవ్వలేదు.</p>
                 {% endif %}
             </div>
         </div>
@@ -315,7 +317,6 @@ def index():
     '''
     return render_template_string(html_content, products=products, user=user, my_ads=my_ads)
 
-# ప్రొడక్ట్ పూర్తి వివరాలు చూపించే ఫుల్ పేజీ రూట్
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
     conn = sqlite3.connect('database.db')
@@ -365,7 +366,6 @@ def product_detail(product_id):
                 <p><b>వివరాలు:</b> {p[6]}</p>
             </div>
 
-            <!-- గూగుల్ మ్యాప్ లొకేషన్ -->
             <div style="width: 100%; height: 160px; margin: 15px 0; border-radius: 6px; overflow: hidden; border: 1px solid #ccc;">
                 <iframe width="100%" height="160" style="border:0;" loading="lazy" src="https://maps.google.com/maps?q={p[5]}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>
             </div>
@@ -415,7 +415,10 @@ def upload_file():
             file,
             S3_BUCKET,
             file.filename,
-            ExtraArgs={"ContentType": file.content_type}
+            ExtraArgs={
+                "ContentType": file.content_type,
+                "ACL": "public-read"
+            }
         )
         image_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file.filename}"
         
@@ -429,7 +432,6 @@ def upload_file():
     except Exception as e:
         return f"ఎర్రర్ వచ్చింది: {str(e)}"
 
-# యాడ్ డిలీట్ చేసే రూట్ (అమ్మకమైపోయినప్పుడు)
 @app.route('/delete_ad/<int:ad_id>')
 def delete_ad(ad_id):
     conn = sqlite3.connect('database.db')
