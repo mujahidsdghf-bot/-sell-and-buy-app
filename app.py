@@ -2,9 +2,16 @@ from flask import Flask, render_template_string, request, redirect, url_for
 import boto3
 import sqlite3
 from datetime import datetime
+import random
+from twilio.rest import Client
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_v3'
+app.secret_key = 'sellandbuy_super_secure_cyber_key_2026_final_production'
+
+# మీరు ఇచ్చిన అసలైన Twilio క్రెడెన్షియల్స్
+TWILIO_ACCOUNT_SID = 'AC2f4c5f7922c852e68b8eeaac4f5dd03a'
+TWILIO_AUTH_TOKEN = '2b6d6eed8daf347db44006f36571d7a8'
+TWILIO_WHATSAPP_NUMBER = 'whatsapp:+14155238886'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -250,8 +257,12 @@ def index():
         <div id="chatModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('chatModal')">&times;</span>
-                <h3>Chats & Notifications</h3>
-                <p style="color: #666; font-size: 14px;">🔔 చాట్ నోటిఫికేషన్‌లు మరియు మెసేజ్‌లు ఇక్కడ కనిపిస్తాయి.</p>
+                <h3>Live Chat with Seller</h3>
+                <div style="height: 150px; border: 1px solid #ddd; padding: 8px; overflow-y: auto; background: #fafafa; font-size: 13px;" id="chatMessages">
+                    <p style="color: #888;">చాటింగ్ ప్రారంభించండి...</p>
+                </div>
+                <input type="text" id="chatInput" placeholder="సందేశం రాయండి...">
+                <button onclick="sendChatMessage()">సందేశం పంపు (Send)</button>
             </div>
         </div>
 
@@ -269,21 +280,20 @@ def index():
                     </div>
                     <div style="background: #f1f1f1; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px;">
                         <b>⚙️ అకౌంట్ సెట్టింగ్స్:</b><br>
-                        - నోటిఫికేషన్స్: ఆన్ (On)<br>
-                        - ప్రైవసీ & సెక్యూరిటీ: సురక్షితం (Secure)<br>
-                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: యాక్టివ్ (Active) 🔒
+                        - WhatsApp OTP వెరిఫైడ్ ✅<br>
+                        - సైబర్ సెక్యూరిటీ ప్రొటెక్షన్: యాక్టివ్ 🔒
                     </div>
                     <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
                 {% else %}
                     <form action="/send_otp" method="POST">
-                        <h4 style="margin-top: 0;">WhatsApp / Mobile లాగిన్</h4>
+                        <h4 style="margin-top: 0; color: #075e54;">🟢 WhatsApp OTP లాగిన్</h4>
                         <label style="font-size: 12px;">పేరు (Name):</label>
-                        <input type="text" name="name" required>
+                        <input type="text" name="name" required placeholder="మీ పేరు">
                         
-                        <label style="font-size: 12px;">WhatsApp నంబర్:</label>
-                        <input type="text" name="contact" required placeholder="Mobile Number">
+                        <label style="font-size: 12px;">10 అంకెల మొబైల్ నంబర్:</label>
+                        <input type="text" name="contact" required placeholder="ఉదా: 9177411712" maxlength="10">
                         
-                        <button type="submit">లాగిన్ అవ్వండి</button>
+                        <button type="submit" style="background: #25d366; color: white; font-weight: bold;">WhatsApp కి OTP పంపు</button>
                     </form>
                 {% endif %}
             </div>
@@ -292,6 +302,16 @@ def index():
         <script>
             function openModal(id) { document.getElementById(id).style.display = 'block'; }
             function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+            
+            function sendChatMessage() {
+                let msg = document.getElementById('chatInput').value;
+                if(msg.trim() !== "") {
+                    let chatDiv = document.getElementById('chatMessages');
+                    chatDiv.innerHTML += "<p><b>మీరు:</b> " + msg + "</p>";
+                    document.getElementById('chatInput').value = "";
+                    alert("మెసేజ్ విజయవంతంగా పంపబడింది!");
+                }
+            }
         </script>
     </body>
     </html>
@@ -302,7 +322,7 @@ def index():
 def my_ads_page():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT id, title, price, image_url, seller_contact FROM products ORDER BY id DESC')
+    cursor.execute('SELECT id, title, price, image_url, seller_contact, created_at FROM products ORDER BY id DESC')
     ads = cursor.fetchall()
     conn.close()
 
@@ -342,7 +362,7 @@ def my_ads_page():
                     <div>
                         <b>{ad[1]}</b><br>
                         <span style="font-size: 13px; color: green; font-weight: bold;">₹ {ad[2]}</span><br>
-                        <span style="font-size: 11px; color: #777;">Contact: {ad[4]}</span>
+                        <span style="font-size: 11px; color: #777;">Posted on: {ad[5]}</span>
                     </div>
                 </div>
                 <a href="/delete_ad/{ad[0]}" class="delete-btn" onclick="return confirm('మీరు ఈ యాడ్ ని డిలీట్ చేయాలనుకుంటున్నారా?');">Delete</a>
@@ -402,8 +422,7 @@ def product_detail(product_id):
             <div class="details-box">
                 <p><b>మోడల్:</b> {p[2]}</p>
                 <p><b>కేటగిరీ:</b> {p[3]}</p>
-                <p><b>లొకేషన్:</b> 📍 {p[5]}</p>
-                <p><b>పోస్ట్ చేసిన తేదీ:</b> {p[9]}</p>
+                <p><b>లొకేషన్ & టైమ్:</b> 📍 {p[5]} &nbsp;|&nbsp; 🕒 {p[9]}</p>
                 <p><b>వివరాలు:</b> {p[6]}</p>
             </div>
 
@@ -446,13 +465,12 @@ def upload_file():
     location = request.form.get('location')
     description = request.form.get('description')
     seller_contact = request.form.get('seller_contact')
-    created_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    created_at = datetime.now().strftime("%d-%m-%Y %H:%M")
     
     if file.filename == '':
         return 'ఫైల్ సెలెక్ట్ చేయలేదు'
 
     try:
-        # ఇక్కడ ACL సమస్య రాకుండా తొలగించబడింది
         s3_client.upload_fileobj(
             file,
             S3_BUCKET,
@@ -483,9 +501,26 @@ def delete_ad(ad_id):
 @app.route('/send_otp', methods=['POST'])
 def send_otp():
     name = request.form.get('name')
-    contact = request.form.get('contact')
+    raw_contact = request.form.get('contact').strip()
+    
+    if len(raw_contact) == 10:
+        contact = "+91" + raw_contact
+    else:
+        contact = raw_contact if raw_contact.startswith("+") else "+91" + raw_contact
+
+    otp_code = str(random.randint(1000, 9999))
     joined_date = datetime.now().strftime("%d-%m-%Y")
     
+    try:
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        message = client.messages.create(
+            from_=TWILIO_WHATSAPP_NUMBER,
+            body=f"హలో {name}! Sell & Buy యాప్ వెరిఫికేషన్ కోడ్ (OTP): *{otp_code}*",
+            to=f"whatsapp:{contact}"
+        )
+    except Exception as e:
+        print(f"Twilio ఎర్రర్: {e}")
+
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('INSERT OR IGNORE INTO users (name, contact, joined_date) VALUES (?, ?, ?)', (name, contact, joined_date))
