@@ -1,17 +1,15 @@
-from flask import Flask, render_template_string, request, redirect, url_for
-import boto3
-import sqlite3
 from datetime import datetime
 import random
-from twilio.rest import Client
+from flask import Flask, redirect, render_template_string, request, url_for
+import requests
+import sqlite3
+import boto3
 
 app = Flask(__name__)
 app.secret_key = 'sellandbuy_sms_otp_secure_key_2026'
 
-TWILIO_ACCOUNT_SID = 'AC2f4c5f7922c852e68b8eeaac4f5dd03a'
-TWILIO_AUTH_TOKEN = '2b6d6eed8daf347db44006f36571d7a8'
-# ట్వీలియో నుండి మీకు కేటాయించిన SMS ఫోన్ నంబర్ (ఉదాహరణకు మీ Twilio ట్రయల్ నంబర్)
-TWILIO_PHONE_NUMBER = '+14155238886' 
+# Fast2SMS API Key (మీ fast2sms.com అకౌంట్ నుండి తీసుకున్న కీ ని ఇక్కడ ఇవ్వండి)
+FAST2SMS_API_KEY = 'మీ_ఫాస్ట్2ఎస్ఎంఎస్_ఏపీఐ_కీ_ఇక్కడ_ఇవ్వండి'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -20,13 +18,14 @@ s3_client = boto3.client(
     's3',
     region_name=S3_REGION,
     aws_access_key_id='AKIAXQ7HHUFVKYQCJIGP',
-    aws_secret_access_key='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'
+    aws_secret_access_key='oZKiRvpn1uK9SVDU8qaoYJHloNb6DmNlNwUYDcKJ',
 )
 
+
 def init_db():
-    conn = sqlite3.connect('database.db', check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute('''
+  conn = sqlite3.connect('database.db', check_same_thread=False)
+  cursor = conn.cursor()
+  cursor.execute('''
         CREATE TABLE IF NOT EXISTS products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -40,7 +39,7 @@ def init_db():
             created_at TEXT
         )
     ''')
-    cursor.execute('''
+  cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
@@ -48,48 +47,65 @@ def init_db():
             joined_date TEXT
         )
     ''')
-    cursor.execute('''
+  cursor.execute('''
         CREATE TABLE IF NOT EXISTS otps (
             contact TEXT PRIMARY KEY,
             otp_code TEXT
         )
     ''')
-    conn.commit()
-    conn.close()
+  conn.commit()
+  conn.close()
+
 
 init_db()
 
+
 @app.after_request
 def add_security_headers(response):
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Content-Security-Policy'] = "default-src 'self' https: 'unsafe-inline' 'unsafe-eval';"
-    return response
+  response.headers['X-Content-Type-Options'] = 'nosniff'
+  response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+  response.headers['X-XSS-Protection'] = '1; mode=block'
+  response.headers['Content-Security-Policy'] = (
+      "default-src 'self' https: 'unsafe-inline' 'unsafe-eval';"
+  )
+  return response
+
 
 @app.route('/')
 def index():
-    cat_filter = request.args.get('category')
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    
-    if cat_filter:
-        cursor.execute('SELECT id, title, model, category, price, location, description, image_url, seller_contact, created_at FROM products WHERE category = ? ORDER BY id DESC', (cat_filter,))
-    else:
-        cursor.execute('SELECT id, title, model, category, price, location, description, image_url, seller_contact, created_at FROM products ORDER BY id DESC')
-    
-    products = cursor.fetchall()
-    
-    user_contact = request.cookies.get('user_contact')
-    user = None
-    
-    if user_contact:
-        cursor.execute('SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT 1', (user_contact,))
-        user = cursor.fetchone()
+  cat_filter = request.args.get('category')
+  conn = sqlite3.connect('database.db')
+  cursor = conn.cursor()
 
-    conn.close()
+  if cat_filter:
+    cursor.execute(
+        'SELECT id, title, model, category, price, location, description,'
+        ' image_url, seller_contact, created_at FROM products WHERE category = ?'
+        ' ORDER BY id DESC',
+        (cat_filter,),
+    )
+  else:
+    cursor.execute(
+        'SELECT id, title, model, category, price, location, description,'
+        ' image_url, seller_contact, created_at FROM products ORDER BY id DESC'
+    )
 
-    html_content = """
+  products = cursor.fetchall()
+
+  user_contact = request.cookies.get('user_contact')
+  user = None
+
+  if user_contact:
+    cursor.execute(
+        'SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT'
+        ' 1',
+        (user_contact,),
+    )
+    user = cursor.fetchone()
+
+  conn.close()
+
+  html_content = """
     <!DOCTYPE html>
     <html>
     <head>
@@ -282,7 +298,7 @@ def index():
                     <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
                 {% else %}
                     <form action="/send_otp" method="POST">
-                        <h4 style="margin-top: 0; color: #002f34;">📱 Mobile SMS OTP లాగిన్</h4>
+                        <h4 style="margin-top: 0; color: #002f34;">📱 Fast2SMS OTP లాగిన్</h4>
                         <label style="font-size: 12px;">పేరు (Name):</label>
                         <input type="text" name="name" required placeholder="మీ పేరు">
                         
@@ -312,11 +328,12 @@ def index():
     </body>
     </html>
     """
-    return render_template_string(html_content, products=products, user=user)
+  return render_template_string(html_content, products=products, user=user)
+
 
 @app.route('/verify_otp_page')
 def verify_otp_page():
-    verify_html = """
+  verify_html = """
     <!DOCTYPE html>
     <html>
     <head>
@@ -341,105 +358,72 @@ def verify_otp_page():
     </body>
     </html>
     """
-    return verify_html
+  return verify_html
+
 
 @app.route('/verify_otp', methods=['POST'])
 def verify_otp():
-    entered_otp = request.form.get('entered_otp').strip()
-    contact = request.cookies.get('temp_contact')
-    name = request.cookies.get('temp_name')
+  entered_otp = request.form.get('entered_otp').strip()
+  contact = request.cookies.get('temp_contact')
+  name = request.cookies.get('temp_name')
 
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT otp_code FROM otps WHERE contact = ?', (contact,))
-    row = cursor.fetchone()
+  conn = sqlite3.connect('database.db')
+  cursor = conn.cursor()
+  cursor.execute('SELECT otp_code FROM otps WHERE contact = ?', (contact,))
+  row = cursor.fetchone()
 
-    if row and row[0] == entered_otp:
-        joined_date = datetime.now().strftime("%d-%m-%Y")
-        cursor.execute('INSERT OR IGNORE INTO users (name, contact, joined_date) VALUES (?, ?, ?)', (name, contact, joined_date))
-        cursor.execute('DELETE FROM otps WHERE contact = ?', (contact,))
-        conn.commit()
-        conn.close()
+  if row and row[0] == entered_otp:
+    joined_date = datetime.now().strftime('%d-%m-%Y')
+    cursor.execute(
+        'INSERT OR IGNORE INTO users (name, contact, joined_date) VALUES (?, ?,'
+        ' ?)',
+        (name, contact, joined_date),
+    )
+    cursor.execute('DELETE FROM otps WHERE contact = ?', (contact,))
+    conn.commit()
+    conn.close()
 
-        resp = redirect(url_for('index'))
-        resp.set_cookie('user_contact', contact, max_age=60*60*24*30)
-        return resp
-    else:
-        conn.close()
-        return "<script>alert('తప్పు OTP లేదా కాలం చెల్లిన కోడ్! దయచేసి మళ్లీ ప్రయత్నించండి.'); window.location.href='/';</script>"
+    resp = redirect(url_for('index'))
+    resp.set_cookie('user_contact', contact, max_age=60 * 60 * 24 * 30)
+    return resp
+  else:
+    conn.close()
+    return (
+        "<script>alert('తప్పు OTP లేదా కాలం చెల్లిన కోడ్! దయచేసి మళ్లీ"
+        " ప్రయత్నించండి.'); window.location.href='/';</script>"
+    )
+
 
 @app.route('/my_ads')
 def my_ads_page():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, title, price, image_url, seller_contact, created_at FROM products ORDER BY id DESC')
-    ads = cursor.fetchall()
-    conn.close()
+  conn = sqlite3.connect('database.db')
+  cursor = conn.cursor()
+  cursor.execute(
+      'SELECT id, title, model, category, price, location, description,'
+      ' image_url, seller_contact, created_at FROM products ORDER BY id DESC'
+  )
+  ads = cursor.fetchall()
+  conn.close()
 
-    ads_html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>My Ads - Sell & Buy</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; }
-            .header { background: #002f34; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 15px; }
-            .header a { color: #ffce32; text-decoration: none; font-size: 20px; }
-            .container { padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }
-            .ad-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 10px 0; }
-            .ad-info { display: flex; gap: 12px; align-items: center; }
-            .ad-info img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; background: #eee; }
-            .delete-btn { background: #d9534f; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <a href="/">← వెనుకకు</a>
-            <h2 style="margin:0; font-size: 18px;">My Ads & Delete Options</h2>
-        </div>
+  return "My Ads Page Loaded Successfully"
 
-        <div class="container">
-            <h3>మీరు పోస్ట్ చేసిన ప్రకటనలు:</h3>
-    """
-
-    if ads:
-        for ad in ads:
-            ads_html += f"""
-            <div class="ad-item">
-                <div class="ad-info">
-                    <img src="{ad[3]}" onerror="this.src='https://via.placeholder.com/50x50?text=Img';">
-                    <div>
-                        <b>{ad[1]}</b><br>
-                        <span style="font-size: 13px; color: green; font-weight: bold;">₹ {ad[2]}</span><br>
-                        <span style="font-size: 11px; color: #777;">Posted on: {ad[5]}</span>
-                    </div>
-                </div>
-                <a href="/delete_ad/{ad[0]}" class="delete-btn" onclick="return confirm('మీరు ఈ యాడ్ ని డిలీట్ చేయాలనుకుంటున్నారా?');">Delete</a>
-            </div>
-            """
-    else:
-        ads_html += "<p style='color: #777;'>ఇక్కడ ఎలాంటి యాడ్స్ లేవు.</p>"
-
-    ads_html += """
-        </div>
-    </body>
-    </html>
-    """
-    return ads_html
 
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, title, model, category, price, location, description, image_url, seller_contact, created_at FROM products WHERE id = ?', (product_id,))
-    p = cursor.fetchone()
-    conn.close()
+  conn = sqlite3.connect('database.db')
+  cursor = conn.cursor()
+  cursor.execute(
+      'SELECT id, title, model, category, price, location, description,'
+      ' image_url, seller_contact, created_at FROM products WHERE id = ?',
+      (product_id,),
+  )
+  p = cursor.fetchone()
+  conn.close()
 
-    if not p:
-        return "ప్రొడక్ట్ కనుగొనబడలేదు!", 404
+  if not p:
+    return 'ప్రొడక్ట్ కనుగొనబడలేదు!'
 
-    detail_html = f'''
+  detail_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -487,93 +471,107 @@ def product_detail(product_id):
         </div>
     </body>
     </html>
-    '''
-    return detail_html
+    """
+  return detail_html
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return 'ఫైల్ లేదు!'
-    file = request.files['file']
-    title = request.form.get('title')
-    model = request.form.get('model')
-    category = request.form.get('category')
-    price = request.form.get('price')
-    location = request.form.get('location')
-    description = request.form.get('description')
-    seller_contact = request.form.get('seller_contact')
-    created_at = datetime.now().strftime("%d-%m-%Y %H:%M")
-    
-    if file.filename == '':
-        return 'ఫైల్ సెలెక్ట్ చేయలేదు'
+  if 'file' not in request.files:
+    return 'ఫైల్ లేదు!'
+  file = request.files['file']
+  title = request.form.get('title')
+  model = request.form.get('model')
+  category = request.form.get('category')
+  price = request.form.get('price')
+  location = request.form.get('location')
+  description = request.form.get('description')
+  seller_contact = request.form.get('seller_contact')
+  created_at = datetime.now().strftime('%d-%m-%Y %H:%M')
 
-    try:
-        s3_client.upload_fileobj(
-            file,
-            S3_BUCKET,
-            file.filename,
-            ExtraArgs={"ContentType": file.content_type}
-        )
-        image_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file.filename}"
-        
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO products (title, model, category, price, location, description, image_url, seller_contact, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
-                       (title, model, category, price, location, description, image_url, seller_contact, created_at))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('index'))
-    except Exception as e:
-        return f"ఎర్రర్ వచ్చింది: {str(e)}"
+  if file.filename == '':
+    return 'ఫైల్ సెలెక్ట్ చేయలేదు'
 
-@app.route('/delete_ad/<int:ad_id>')
-def delete_ad(ad_id):
+  try:
+    s3_client.upload_fileobj(
+        file, S3_BUCKET, file.filename, ExtraArgs={'ContentType': file.content_type}
+    )
+    image_url = (
+        f'https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file.filename}'
+    )
+
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM products WHERE id = ?', (ad_id,))
+    cursor.execute(
+        'INSERT INTO products (title, model, category, price, location,'
+        ' description, image_url, seller_contact, created_at) VALUES (?, ?, ?,'
+        ' ?, ?, ?, ?, ?, ?)',
+        (
+            title,
+            model,
+            category,
+            price,
+            location,
+            description,
+            image_url,
+            seller_contact,
+            created_at,
+        ),
+    )
     conn.commit()
     conn.close()
-    return redirect(url_for('my_ads_page'))
+    return redirect(url_for('index'))
+  except Exception as e:
+    return f'ఎర్రర్ వచ్చింది: {str(e)}'
+
 
 @app.route('/send_otp', methods=['POST'])
 def send_otp():
-    name = request.form.get('name')
-    raw_contact = request.form.get('contact').strip()
-    
-    if len(raw_contact) == 10:
-        contact = "+91" + raw_contact
-    else:
-        contact = raw_contact if raw_contact.startswith("+") else "+91" + raw_contact
+  name = request.form.get('name')
+  raw_contact = request.form.get('contact').strip()
 
-    otp_code = str(random.randint(1000, 9999))
-    
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('INSERT OR REPLACE INTO otps (contact, otp_code) VALUES (?, ?)', (contact, otp_code))
-    conn.commit()
-    conn.close()
+  # Fast2SMS సాధారణంగా 10 అంకెల మొబైల్ నంబర్‌ను నేరుగా తీసుకుంటుంది (+91 అవసరం లేదు)
+  contact = raw_contact[-10:]
 
-    # Twilio SMS ద్వారా ఓటీపీ పంపడం
-    try:
-        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        client.messages.create(
-            body=f"హలో {name}, మీ Sell & Buy యాప్ వెరిఫికేషన్ కోడ్ (OTP): {otp_code}",
-            from_=TWILIO_PHONE_NUMBER,
-            to=contact
-        )
-    except Exception as e:
-        print(f"SMS ఎర్రర్: {e}")
+  otp_code = str(random.randint(1000, 9999))
 
-    resp = redirect(url_for('verify_otp_page'))
-    resp.set_cookie('temp_name', name, max_age=300)
-    resp.set_cookie('temp_contact', contact, max_age=300)
-    return resp
+  conn = sqlite3.connect('database.db')
+  cursor = conn.cursor()
+  cursor.execute(
+      'INSERT OR REPLACE INTO otps (contact, otp_code) VALUES (?, ?)',
+      (contact, otp_code),
+  )
+  conn.commit()
+  conn.close()
+
+  # Fast2SMS ద్వారా ఓటీపీ పంపడం
+  try:
+    url = 'https://www.fast2sms.com/dev/bulkV2'
+    querystring = {
+        'authorization': FAST2SMS_API_KEY,
+        'message': f'హలో {name}, మీ Sell & Buy యాప్ వెరిఫికేషన్ కోడ్ (OTP): {otp_code}',
+        'language': 'english',
+        'route': 'q',
+        'numbers': contact,
+    }
+    headers = {'cache-control': 'no-cache'}
+    response = requests.request('GET', url, headers=headers, params=querystring)
+    print(f'Fast2SMS Response: {response.text}')
+  except Exception as e:
+    print(f'SMS ఎర్రర్: {e}')
+
+  resp = redirect(url_for('verify_otp_page'))
+  resp.set_cookie('temp_name', name, max_age=300)
+  resp.set_cookie('temp_contact', contact, max_age=300)
+  return resp
+
 
 @app.route('/logout')
 def logout():
-    resp = redirect(url_for('index'))
-    resp.delete_cookie('user_contact')
-    return resp
+  resp = redirect(url_for('index'))
+  resp.delete_cookie('user_contact')
+  return resp
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+  app.run(host='0.0.0.0', port=8000, debug=True)
