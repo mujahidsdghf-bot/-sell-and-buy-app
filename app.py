@@ -10,10 +10,10 @@ app = Flask(__name__)
 app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 
 # ==========================================
-# మీ జీమెయిల్ వివరాలు ఇక్కడ రాయండి
+# మీ జీమెయిల్ వివరాలు ఇక్కడ రాయండి (స్పేస్‌లు లేకుండా)
 # ==========================================
-SENDER_EMAIL = 'mujahidsdghf@gmail.com'     # మీ నిజమైన జీమెయిల్ అడ్రస్ ఇక్కడ ఇవ్వండి
-SENDER_PASSWORD = 'wnvlywnseerywvrs'     # గూగుల్ అకౌంట్ నుంచి తెచ్చుకున్న యాప్ పాస్‌వర్డ్ ఇక్కడ ఇవ్వండి
+SENDER_EMAIL = 'mujahidsdghf@gmail.com'
+SENDER_PASSWORD = 'wnvlywnseerywvrs'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -214,7 +214,7 @@ def index():
 
         <!-- AI Voice Assistant Floating Button -->
         <div class="ai-voice-btn" onclick="openModal('aiVoiceModal')">
-            🎙️ AI Voice Help (తెలుగు / हिंदी / English)
+            🎙️ AI Voice Chat (తెలుగు/हिंदी/English)
         </div>
 
         <div class="bottom-nav">
@@ -268,21 +268,25 @@ def index():
             </div>
         </div>
 
-        <!-- AI Voice Assistant Modal -->
+        <!-- AI Voice Assistant Modal (Conversational Multi-lingual) -->
         <div id="aiVoiceModal" class="modal">
             <div class="modal-content" style="text-align: center;">
                 <span class="close" onclick="closeModal('aiVoiceModal')">&times;</span>
-                <h3 style="color: var(--primary);">🤖 AI Voice Assistant</h3>
-                <p style="font-size: 13px; color: #666;">భాషను ఎంచుకోండి (Select Language):</p>
+                <h3 style="color: var(--primary);">🤖 AI Voice Chat Agent</h3>
+                <p style="font-size: 13px; color: #666;">భాషను ఎంచుకోండి లేదా ప్రశ్న అడగండి:</p>
                 
-                <div style="display: flex; gap: 10px; justify-content: center; margin: 15px 0;">
-                    <button onclick="speakVoice('telugu')" style="background: #28a745; width: auto; padding: 10px 14px; font-size: 13px;">తెలుగు 🇮🇳</button>
-                    <button onclick="speakVoice('hindi')" style="background: #ffc107; color: #000; width: auto; padding: 10px 14px; font-size: 13px;">हिंदी 🇮🇳</button>
-                    <button onclick="speakVoice('english')" style="background: #007bff; width: auto; padding: 10px 14px; font-size: 13px;">English 🌐</button>
+                <div style="display: flex; gap: 8px; justify-content: center; margin: 12px 0;">
+                    <button onclick="setVoiceLang('te')" style="background: #28a745; width: auto; padding: 8px 10px; font-size: 12px;">తెలుగు 🇮🇳</button>
+                    <button onclick="setVoiceLang('hi')" style="background: #ffc107; color: #000; width: auto; padding: 8px 10px; font-size: 12px;">हिंदी 🇮🇳</button>
+                    <button onclick="setVoiceLang('en')" style="background: #007bff; width: auto; padding: 8px 10px; font-size: 12px;">English 🌐</button>
                 </div>
 
-                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 14px; border: 1px dashed #ccc; color: #333;">
-                    పైన ఉన్న బటన్‌లపై క్లిక్ చేస్తే AI వాయిస్ ఏజెంట్ స్పష్టంగా మాట్లాడుతుంది!
+                <div style="margin: 12px 0;">
+                    <button onclick="startListening()" id="micBtn" style="background: linear-gradient(45deg, #ff416c, #ff4b2b); border-radius: 30px; padding: 10px 18px; font-size: 14px;">🎙️ మాట్లాడటానికి ఇక్కడ నొక్కండి</button>
+                </div>
+
+                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 13px; border: 1px dashed #ccc; color: #333; max-height: 120px; overflow-y: auto;">
+                    ఏదైనా భాషలో మాట్లాడండి లేదా బటన్ నొక్కి సహాయం పొందండి.
                 </div>
             </div>
         </div>
@@ -345,34 +349,69 @@ def index():
                 }
             }
 
-            function speakVoice(lang) {
-                if (!('speechSynthesis' in window)) {
-                    alert("మీ బ్రౌజర్ వాయిస్ స్పీచ్ సపోర్ట్ చేయదు.");
+            // AI Voice Assistant & Speech Recognition Logic
+            let currentLang = 'te-IN';
+
+            function setVoiceLang(lang) {
+                if(lang === 'te') {
+                    currentLang = 'te-IN';
+                    speakAgent("నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు ఏ వస్తువు కొనాలనుకుంటున్నారు లేదా అమ్మాలనుకుంటున్నారు?", 'te-IN');
+                } else if(lang === 'hi') {
+                    currentLang = 'hi-IN';
+                    speakAgent("नमस्ते! Sell & Buy स्टोर में आपका स्वागत है। आप क्या खरीदना या बेचना चाहते हैं?", 'hi-IN');
+                } else {
+                    currentLang = 'en-US';
+                    speakAgent("Hello and welcome to Sell and Buy store. What would you like to buy or sell today?", 'en-US');
+                }
+            }
+
+            function speakAgent(text, langCode) {
+                if (!('speechSynthesis' in window)) return;
+                window.speechSynthesis.cancel();
+                let utter = new SpeechSynthesisUtterance(text);
+                utter.lang = langCode;
+                utter.rate = 1.0;
+                document.getElementById('voiceStatusBox').innerHTML = "<b>AI Agent:</b> " + text;
+                window.speechSynthesis.speak(utter);
+            }
+
+            function startListening() {
+                let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    alert("మీ బ్రౌజర్ వాయిస్ రికగ్నిషన్ సపోర్ట్ చేయదు. దయచేసి గూగుల్ క్రోమ్ వాడండి.");
                     return;
                 }
-                
-                window.speechSynthesis.cancel(); // మునుపటి స్పీచ్ ఉంటే ఆపడానికి
-                let text = "";
-                let box = document.getElementById('voiceStatusBox');
-                let utterThis = new SpeechSynthesisUtterance();
-                
-                if(lang === 'telugu') {
-                    text = "నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు ఇక్కడ మీ పాత వస్తువులను సులభంగా అమ్ముకోవచ్చు మరియు కొనుగోలు చేయవచ్చు.";
-                    utterThis.lang = 'te-IN';
-                    box.innerHTML = "<b>తెలుగు AI:</b> " + text;
-                } else if(lang === 'hindi') {
-                    text = "नमस्ते! Sell & Buy स्टोर में आपका स्वागत है। आप यहाँ अपने पुराने सामान आसानी से खरीद और बेच सकते हैं।";
-                    utterThis.lang = 'hi-IN';
-                    box.innerHTML = "<b>हिंदी AI:</b> " + text;
-                } else {
-                    text = "Hello and welcome to Sell and Buy store. You can easily buy and sell pre-owned items here.";
-                    utterThis.lang = 'en-US';
-                    box.innerHTML = "<b>English AI:</b> " + text;
-                }
 
-                utterThis.text = text;
-                utterThis.rate = 1.0; 
-                window.speechSynthesis.speak(utterThis);
+                let recognition = new SpeechRecognition();
+                recognition.lang = currentLang;
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                document.getElementById('voiceStatusBox').innerHTML = "🎙️ వింటున్నాను... దయచేసి మాట్లాడండి...";
+
+                recognition.onresult = function(event) {
+                    let speechResult = event.results[0][0].transcript;
+                    document.getElementById('voiceStatusBox').innerHTML = "<b>మీరు అన్నారు:</b> " + speechResult;
+                    
+                    // Intelligent Voice Agent Response Simulation
+                    setTimeout(() => {
+                        let reply = "";
+                        if (currentLang === 'te-IN') {
+                            reply = "నేను మీ మాట విన్నాను: '" + speechResult + "'. Sell & Buy స్టోర్ లో దీన్ని వెతకడానికి సెర్చ్ బార్ ఉపయోగించండి!";
+                        } else if (currentLang === 'hi-IN') {
+                            reply = "मैंने सुना: '" + speechResult + "'. इसे खोजने के लिए सर्च बार का उपयोग करें!";
+                        } else {
+                            reply = "I heard: '" + speechResult + "'. Please use the search bar above to find items.";
+                        }
+                        speakAgent(reply, currentLang);
+                    }, 1000);
+                };
+
+                recognition.onerror = function(event) {
+                    document.getElementById('voiceStatusBox').innerHTML = "❌ వాయిస్ రికగ్నిషన్ ఎర్రర్ వచ్చింది. మళ్లీ ప్రయత్నించండి.";
+                };
+
+                recognition.start();
             }
         </script>
     </body>
@@ -670,7 +709,8 @@ def send_otp():
     server.send_message(msg)
     server.quit()
   except Exception as e:
-    print(f'Email Error: {e}')
+    # ఒకవేళ మెయిల్ ఫెయిల్ అయితే ఆ ఎర్రర్ నేరుగా స్క్రీన్ పై కనిపిస్తుంది
+    return f'<h3>Email Sending Error:</h3><p style="color:red;">{str(e)}</p><a href="/"> వెనక్కి వెళ్ళండి</a>'
 
   resp = redirect(url_for('verify_otp_page'))
   resp.set_cookie('temp_name', name, max_age=300)
