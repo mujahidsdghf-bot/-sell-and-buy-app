@@ -10,8 +10,8 @@ app = Flask(__name__)
 app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 
 # మీ జీమెయిల్ వివరాలు ఇక్కడ ఇవ్వండి
-SENDER_EMAIL = 'your_email@gmail.com'
-SENDER_PASSWORD = 'your_gmail_app_password'
+SENDER_EMAIL = 'mujahidsdghf@gmail.com'
+SENDER_PASSWORD = 'wnvl ywns eery wvrs'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
