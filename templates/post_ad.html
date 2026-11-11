@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>Post Ad</title>
+</head>
+<body style="font-family: Arial; background: #f2f4f5; padding: 20px;">
+    <div style="max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px;">
+        <h2>కొత్త యాడ్ పోస్ట్ చేయండి</h2>
+        <p>మిగిలిన ఫ్రీ యాడ్స్: <b>{{ user.free_ads_count }}</b></p>
+        <form method="POST">
+            <input type="text" name="title" placeholder="ప్రొడక్ట్ పేరు (Title)" required style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
+            <select name="category" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+                <option value="Cars">Cars</option>
+                <option value="Mobiles">Mobiles</option>
+                <option value="Bikes">Bikes</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Furniture">Furniture</option>
+            </select><br>
+            <input type="number" name="price" placeholder="ధర (Price in ₹)" required style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
+            <textarea name="description" placeholder="వివరణ (Description)" style="width: 100%; padding: 10px; margin-bottom: 10px;"></textarea><br>
+            <input type="text" name="location" value="Suraram, Hyderabad" style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
+            <button type="submit" style="background: #002f34; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; width: 100%;">యాడ్ పోస్ట్ చేయి</button>
+        </form>
+        <br>
+        <a href="/" style="color: #002f34; text-decoration: none;">← హోమ్ పేజీ</a>
+    </div>
+</body>
+</html>
