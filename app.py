@@ -13,7 +13,7 @@ app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 # మీ జీమెయిల్ వివరాలు ఇక్కడ రాయండి
 # ==========================================
 SENDER_EMAIL = 'mujahidsdghf@gmail.com'     # మీ నిజమైన జీమెయిల్ అడ్రస్ ఇక్కడ ఇవ్వండి
-SENDER_PASSWORD = 'wnvl ywns eery wvrs'     # గూగుల్ అకౌంట్ నుంచి తెచ్చుకున్న యాప్ పాస్‌వర్డ్ ఇక్కడ ఇవ్వండి
+SENDER_PASSWORD = 'wnvlywnseerywvrs'     # గూగుల్ అకౌంట్ నుంచి తెచ్చుకున్న యాప్ పాస్‌వర్డ్ ఇక్కడ ఇవ్వండి
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
