@@ -8,11 +8,11 @@ import boto3
 app = Flask(__name__)
 app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 
-# ==========================================
-# Brevo API కాన్ఫిగరేషన్ (కొత్త API Key)
-# ==========================================
-BREVO_API_KEY = "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"
-SENDER_EMAIL = "mujahidsdghf@gmail.com"  # లేదా Brevo లో వెరిఫై అయిన ఈమెయిల్
+import os
+
+# Render Environment Variable నుంచి Brevo API Key ని తీసుకోవడం
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
+SENDER_EMAIL = "mujahidsdghf@gmail.com"  # మీ బ్రీవో లో వెరిఫై అయిన ఈమెయిల్
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
