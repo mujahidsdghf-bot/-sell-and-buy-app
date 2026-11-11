@@ -1,15 +1,17 @@
 from datetime import datetime
+import email.message
 import random
+import smtplib
 from flask import Flask, redirect, render_template_string, request, url_for
-import requests
 import sqlite3
 import boto3
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_sms_otp_secure_key_2026'
+app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 
-# Fast2SMS API Key (మీ fast2sms.com అకౌంట్ నుండి తీసుకున్న కీ ని ఇక్కడ ఇవ్వండి)
-FAST2SMS_API_KEY = 'మీ_ఫాస్ట్2ఎస్ఎంఎస్_ఏపీఐ_కీ_ఇక్కడ_ఇవ్వండి'
+# మీ జీమెయిల్ వివరాలు ఇక్కడ ఇవ్వండి
+SENDER_EMAIL = 'your_email@gmail.com'
+SENDER_PASSWORD = 'your_gmail_app_password'
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -65,9 +67,6 @@ def add_security_headers(response):
   response.headers['X-Content-Type-Options'] = 'nosniff'
   response.headers['X-Frame-Options'] = 'SAMEORIGIN'
   response.headers['X-XSS-Protection'] = '1; mode=block'
-  response.headers['Content-Security-Policy'] = (
-      "default-src 'self' https: 'unsafe-inline' 'unsafe-eval';"
-  )
   return response
 
 
@@ -107,70 +106,74 @@ def index():
 
   html_content = """
     <!DOCTYPE html>
-    <html>
+    <html lang="te">
     <head>
-        <title>Sell & Buy - OLX Style</title>
+        <meta charset="UTF-8">
+        <title>Sell & Buy Store - Advanced Marketplace</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body { font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; padding-bottom: 70px; }
-            .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
-            .logo-container { display: flex; align-items: center; gap: 8px; }
-            .logo-text { font-size: 20px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-            .search-container { background: white; padding: 10px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; }
-            .location-bar, .search-bar { display: flex; gap: 8px; align-items: center; border: 2px solid #002f34; border-radius: 4px; padding: 8px; }
-            .location-bar input, .search-bar input { width: 100%; border: none; outline: none; font-size: 14px; }
-            .top-ad-banner { background: #ffce32; color: #002f34; padding: 10px; text-align: center; font-weight: bold; font-size: 13px; border-bottom: 1px solid #e0b825; }
-            .categories { padding: 15px; background: white; margin-top: 5px; }
-            .categories h3 { font-size: 16px; margin-bottom: 10px; }
-            .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
-            .cat-item { background: #ebeeef; padding: 12px 5px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; color: #002f34; display: block; }
-            .cat-item:hover { background: #002f34; color: white; }
-            .section-title { padding: 15px 15px 5px 15px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-            .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 15px; }
-            .product-card { background: white; border: 1px solid #ebeeef; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; text-decoration: none; color: inherit; display: block; }
-            .product-card img { width: 100%; height: 150px; object-fit: cover; background: #eee; }
-            .product-info { padding: 10px; }
-            .price { font-size: 18px; font-weight: bold; color: #002f34; margin: 4px 0; }
-            .title { font-size: 14px; color: #333; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .loc { font-size: 11px; color: #777; margin-top: 3px; }
-            .ad-banner-box { grid-column: span 2; background: #002f34; color: #ffce32; padding: 15px; text-align: center; font-weight: bold; border-radius: 6px; margin: 5px 0; border: 1px dashed #ffce32; }
-            .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #ddd; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); z-index: 99; }
-            .nav-item { text-align: center; font-size: 11px; color: #555; text-decoration: none; cursor: pointer; }
-            .sell-btn-nav { background: #ffce32; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin-top: -15px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); color: #002f34; }
-            .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
-            .modal-content { background: white; margin: 10% auto; padding: 20px; width: 85%; max-width: 400px; border-radius: 8px; position: relative; }
-            .close { float: right; font-size: 22px; cursor: pointer; font-weight: bold; color: #333; }
-            .modal input, .modal select, .modal textarea { width: 100%; padding: 8px; margin: 5px 0 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-            .modal button { background: #002f34; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+            :root { --primary: #002f34; --accent: #ffce32; --bg: #f4f6f8; --text: #222; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
+            .header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+            .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .search-container { background: white; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px; }
+            .search-bar { display: flex; gap: 10px; align-items: center; border: 2px solid var(--primary); border-radius: 6px; padding: 8px 12px; background: #fff; }
+            .search-bar input { width: 100%; border: none; outline: none; font-size: 15px; }
+            .top-ad-banner { background: var(--accent); color: var(--primary); padding: 12px; text-align: center; font-weight: bold; font-size: 14px; border-bottom: 1px solid #e0b825; }
+            .categories { padding: 15px 20px; background: white; margin-top: 8px; }
+            .categories h3 { font-size: 16px; margin-bottom: 12px; color: var(--primary); }
+            .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center; }
+            .cat-item { background: #f1f3f5; padding: 14px 6px; border-radius: 10px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; color: var(--primary); transition: 0.2s; }
+            .cat-item:hover { background: var(--primary); color: white; transform: translateY(-2px); }
+            .section-title { padding: 20px 20px 10px 20px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
+            .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 0 15px; }
+            .product-card { background: white; border: 1px solid #e5e8eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.04); cursor: pointer; text-decoration: none; color: inherit; display: block; transition: 0.2s; }
+            .product-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+            .product-card img { width: 100%; height: 160px; object-fit: cover; background: #eee; }
+            .product-info { padding: 12px; }
+            .price { font-size: 19px; font-weight: bold; color: var(--primary); margin: 4px 0; }
+            .title { font-size: 14px; color: #444; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .loc { font-size: 12px; color: #777; margin-top: 4px; }
+            
+            /* AI Voice Assistant Floating Button */
+            .ai-voice-btn { position: fixed; bottom: 85px; right: 20px; background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border-radius: 50px; padding: 12px 20px; font-weight: bold; box-shadow: 0 4px 15px rgba(255,65,108,0.4); cursor: pointer; display: flex; align-items: center; gap: 8px; z-index: 98; font-size: 14px; border: 2px solid white; animation: pulse 2s infinite; }
+            @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+            .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 99; }
+            .nav-item { text-align: center; font-size: 11px; color: #555; text-decoration: none; cursor: pointer; font-weight: 600; }
+            .sell-btn-nav { background: var(--accent); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 26px; margin-top: -18px; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); color: var(--primary); }
+            
+            .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); overflow-y: auto; }
+            .modal-content { background: white; margin: 8% auto; padding: 25px; width: 90%; max-width: 420px; border-radius: 14px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+            .close { float: right; font-size: 24px; cursor: pointer; font-weight: bold; color: #666; }
+            .modal input, .modal select, .modal textarea { width: 100%; padding: 10px 12px; margin: 8px 0 14px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; }
+            .modal input:focus, .modal select:focus { border-color: var(--primary); }
+            .modal button { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 5px; }
         </style>
     </head>
     <body>
 
         <div class="header">
-            <div class="logo-container">
-                <span style="font-size: 20px;">⚡</span>
-                <div class="logo-text">Sell & Buy 🚀</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 22px;">⚡</span>
+                <div class="logo-text">Sell & Buy Store</div>
             </div>
-            <span style="font-size: 13px;">📍 Hyderabad</span>
+            <span style="font-size: 13px; background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 20px;">📍 Hyderabad</span>
         </div>
 
         <div class="search-container">
-            <div class="location-bar">
-                <span>📍</span>
-                <input type="text" placeholder="మీ ఊరు / లొకేషన్ రాయండి (ఉదా: Suraram, Hyderabad)">
-            </div>
             <div class="search-bar">
                 <span>🔍</span>
-                <input type="text" placeholder="Find Cars, Bikes, Mobile Phones and more...">
+                <input type="text" placeholder="కార్లు, మొబైల్స్, బైకులు మరియు ఇతర వస్తువుల కోసం వెతకండి...">
             </div>
         </div>
 
         <div class="top-ad-banner">
-            🚀 ప్రత్యేక ప్రకటన: మీ పాత వస్తువులను ఇక్కడ ఉచితంగా అమ్ముకోండి!
+            🚀 ప్రత్యేక ఆఫర్: మీ పాత వస్తువులను ఇక్కడ ఉచితంగా అమ్ముకోండి!
         </div>
 
         <div class="categories">
-            <h3>Browse Categories</h3>
+            <h3>వస్తువుల కేటగిరీలు (Categories)</h3>
             <div class="cat-grid">
                 <a href="/?category=Cars" class="cat-item">🚗 Cars</a>
                 <a href="/?category=Mobiles" class="cat-item">📱 Mobiles</a>
@@ -184,34 +187,33 @@ def index():
         </div>
 
         <div class="section-title">
-            <span>Fresh Recommendations</span>
-            <a href="/" style="font-size: 12px; color: #002f34; text-decoration: none;">View All</a>
+            <span>తాజా ప్రకటనలు (Fresh Recommendations)</span>
+            <a href="/" style="font-size: 13px; color: var(--primary); text-decoration: none;">అన్నీ చూడండి</a>
         </div>
 
         <div class="product-grid">
             {% if products %}
                 {% for p in products %}
                     <a href="/product/{{ p[0] }}" class="product-card">
-                        <img src="{{ p[7] }}" alt="Item" onerror="this.src='https://via.placeholder.com/300x150?text=Image+Loading';">
+                        <img src="{{ p[7] }}" alt="Item" onerror="this.src='https://via.placeholder.com/300x160?text=Image+Loading';">
                         <div class="product-info">
                             <div class="price">₹ {{ p[4] }}</div>
                             <div class="title">{{ p[1] }} ({{ p[2] }})</div>
                             <div class="loc">📍 {{ p[5] }}</div>
                         </div>
                     </a>
-
-                    {% if loop.index % 3 == 0 %}
-                        <div class="ad-banner-box">
-                            📢 Sponsored Ad: మీ వ్యాపారాన్ని ఇక్కడ ప్రమోట్ చేసుకోండి!
-                        </div>
-                    {% endif %}
                 {% endfor %}
             {% else %}
-                <div style="padding: 20px; text-align: center; color: #777; grid-column: span 2;">
-                    <p style="font-size: 15px; font-weight: bold;">ఈ కేటగిరీలో ఇంకా ఎలాంటి వస్తువులు లేవు!</p>
-                    <a href="/" style="color: #002f34; text-decoration: underline;">అన్ని వస్తువులను చూడండి</a>
+                <div style="padding: 30px; text-align: center; color: #777; grid-column: span 2;">
+                    <p style="font-size: 16px; font-weight: bold;">ఈ కేటగిరీలో ఇంకా ఎలాంటి వస్తువులు లేవు!</p>
+                    <a href="/" style="color: var(--primary); text-decoration: underline;">అన్ని వస్తువులను చూడండి</a>
                 </div>
             {% endif %}
+        </div>
+
+        <!-- AI Voice Assistant Floating Button -->
+        <div class="ai-voice-btn" onclick="openModal('aiVoiceModal')">
+            🎙️ AI Voice Help (తెలుగు / हिंदी / English)
         </div>
 
         <div class="bottom-nav">
@@ -226,15 +228,15 @@ def index():
         <div id="sellModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('sellModal')">&times;</span>
-                <h3>Post New Ad</h3>
+                <h3 style="color: var(--primary); margin-top:0;">కొత్త ప్రకటన పోస్ట్ చేయండి (Post Ad)</h3>
                 <form action="/upload" method="POST" enctype="multipart/form-data">
-                    <label style="font-size: 12px; font-weight: bold;">వస్తువు పేరు:</label>
-                    <input type="text" name="title" required placeholder="ఉదా: Bike">
+                    <label style="font-size: 13px; font-weight: bold;">వస్తువు పేరు:</label>
+                    <input type="text" name="title" required placeholder="ఉదా: Hero Splendor Bike">
                     
-                    <label style="font-size: 12px; font-weight: bold;">మోడల్ (Model):</label>
-                    <input type="text" name="model" required placeholder="ఉదా: Bajaj Pulsar 2013">
+                    <label style="font-size: 13px; font-weight: bold;">మోడల్ (Model):</label>
+                    <input type="text" name="model" required placeholder="ఉదా: 2021 Model">
 
-                    <label style="font-size: 12px; font-weight: bold;">కేటగిరీ:</label>
+                    <label style="font-size: 13px; font-weight: bold;">కేటగిరీ:</label>
                     <select name="category">
                         <option value="Bikes">Bikes</option>
                         <option value="Cars">Cars</option>
@@ -245,23 +247,73 @@ def index():
                         <option value="Others">Others</option>
                     </select>
 
-                    <label style="font-size: 12px; font-weight: bold;">ధర (Rs):</label>
-                    <input type="text" name="price" required placeholder="ఉదా: 29000">
+                    <label style="font-size: 13px; font-weight: bold;">ధర (Rs):</label>
+                    <input type="text" name="price" required placeholder="ఉదా: 45000">
 
-                    <label style="font-size: 12px; font-weight: bold;">లొకేషన్:</label>
-                    <input type="text" name="location" required placeholder="ఉదా: Khammam">
+                    <label style="font-size: 13px; font-weight: bold;">లొకేషన్:</label>
+                    <input type="text" name="location" required placeholder="ఉదా: Suraram, Hyderabad">
 
-                    <label style="font-size: 12px; font-weight: bold;">వివరాలు (Description):</label>
-                    <textarea name="description" rows="3" placeholder="కండిషన్ రాయండి..."></textarea>
+                    <label style="font-size: 13px; font-weight: bold;">వివరాలు (Description):</label>
+                    <textarea name="description" rows="3" placeholder="వస్తువు కండిషన్ రాయండి..."></textarea>
                     
-                    <label style="font-size: 12px; font-weight: bold;">ఫోటో:</label>
-                    <input type="file" name="file" required style="border:none;">
+                    <label style="font-size: 13px; font-weight: bold;">ఫోటో అప్‌లోడ్:</label>
+                    <input type="file" name="file" required style="border:none; padding: 0;">
 
-                    <label style="font-size: 12px; font-weight: bold;">మొబైల్ నంబర్:</label>
-                    <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Mobile Number">
+                    <label style="font-size: 13px; font-weight: bold;">మొబైల్ నంబర్ / కాంటాక్ట్:</label>
+                    <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Contact number">
                     
-                    <button type="submit">పోస్ట్ చేయండి</button>
+                    <button type="submit">ప్రకటన లైవ్ చేయండి</button>
                 </form>
+            </div>
+        </div>
+
+        <!-- AI Voice Assistant Modal -->
+        <div id="aiVoiceModal" class="modal">
+            <div class="modal-content" style="text-align: center;">
+                <span class="close" onclick="closeModal('aiVoiceModal')">&times;</span>
+                <h3 style="color: var(--primary);">🤖 AI Voice Assistant</h3>
+                <p style="font-size: 13px; color: #666;">మీకు ఏ భాషలో సహాయం కావాలి? (Select Language)</p>
+                
+                <div style="display: flex; gap: 10px; justify-content: center; margin: 15px 0;">
+                    <button onclick="speakVoice('telugu')" style="background: #28a745; width: auto; padding: 8px 12px; font-size: 12px;">తెలుగు 🇮🇳</button>
+                    <button onclick="speakVoice('hindi')" style="background: #ffc107; color: #000; width: auto; padding: 8px 12px; font-size: 12px;">हिंदी 🇮🇳</button>
+                    <button onclick="speakVoice('english')" style="background: #007bff; width: auto; padding: 8px 12px; font-size: 12px;">English 🌐</button>
+                </div>
+
+                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 14px; border: 1px dashed #ccc;">
+                    భాషను ఎంచుకోండి, AI వాయిస్ ఏజెంట్ మాట్లాడటం ప్రారంభిస్తుంది.
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Modal -->
+        <div id="accountModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('accountModal')">&times;</span>
+                <h3>Customer Account & Profile</h3>
+                {% if user %}
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <div style="font-size: 50px;">👤</div>
+                        <h4 style="margin: 5px 0;">{{ user[0] }}</h4>
+                        <p style="font-size: 12px; color: #666; margin: 0;">📧 {{ user[1] }}</p>
+                        <p style="font-size: 11px; color: #888; margin-top: 5px;">జాయిన్ అయిన తేదీ: {{ user[2] }}</p>
+                    </div>
+                    <div style="background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; text-align: center;">
+                        <b>Email OTP Verified & Secured ✅</b>
+                    </div>
+                    <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
+                {% else %}
+                    <form action="/send_otp" method="POST">
+                        <h4 style="margin-top: 0; color: var(--primary);">📧 Email OTP లాగిన్ / రిజిస్ట్రేషన్</h4>
+                        <label style="font-size: 13px;">మీ పేరు (Name):</label>
+                        <input type="text" name="name" required placeholder="మీ పూర్తి పేరు">
+                        
+                        <label style="font-size: 13px;">ఈమెయిల్ అడ్రస్ (Email):</label>
+                        <input type="email" name="contact" required placeholder="yourname@gmail.com">
+                        
+                        <button type="submit" style="background: var(--primary); color: white; font-weight: bold;">ఈమెయిల్‌కు OTP పంపు</button>
+                    </form>
+                {% endif %}
             </div>
         </div>
 
@@ -270,44 +322,11 @@ def index():
             <div class="modal-content">
                 <span class="close" onclick="closeModal('chatModal')">&times;</span>
                 <h3>Live Chat with Seller</h3>
-                <div style="height: 150px; border: 1px solid #ddd; padding: 8px; overflow-y: auto; background: #fafafa; font-size: 13px;" id="chatMessages">
+                <div style="height: 160px; border: 1px solid #ddd; padding: 10px; overflow-y: auto; background: #fafafa; font-size: 13px; border-radius: 6px;" id="chatMessages">
                     <p style="color: #888;">చాటింగ్ ప్రారంభించండి...</p>
                 </div>
                 <input type="text" id="chatInput" placeholder="సందేశం రాయండి...">
                 <button onclick="sendChatMessage()">సందేశం పంపు (Send)</button>
-            </div>
-        </div>
-
-        <!-- Account Modal -->
-        <div id="accountModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('accountModal')">&times;</span>
-                <h3>Customer Profile & Settings</h3>
-                {% if user %}
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <div style="font-size: 50px;">👤</div>
-                        <h4 style="margin: 5px 0;">{{ user[0] }}</h4>
-                        <p style="font-size: 12px; color: #666; margin: 0;">📱/✉️ {{ user[1] }}</p>
-                        <p style="font-size: 11px; color: #888; margin-top: 5px;">జాయిన్ అయిన తేదీ: {{ user[2] }}</p>
-                    </div>
-                    <div style="background: #f1f1f1; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px;">
-                        <b>⚙️ అకౌంట్ సెట్టింగ్స్:</b><br>
-                        - SMS OTP Verified ✅<br>
-                        - Cyber Protection: Active 🔒
-                    </div>
-                    <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
-                {% else %}
-                    <form action="/send_otp" method="POST">
-                        <h4 style="margin-top: 0; color: #002f34;">📱 Fast2SMS OTP లాగిన్</h4>
-                        <label style="font-size: 12px;">పేరు (Name):</label>
-                        <input type="text" name="name" required placeholder="మీ పేరు">
-                        
-                        <label style="font-size: 12px;">10 అంకెల మొబైల్ నంబర్:</label>
-                        <input type="text" name="contact" required placeholder="ఉదా: 9177411712" maxlength="10">
-                        
-                        <button type="submit" style="background: #002f34; color: white; font-weight: bold;">SMS ద్వారా OTP పంపు</button>
-                    </form>
-                {% endif %}
             </div>
         </div>
 
@@ -324,6 +343,26 @@ def index():
                     chatDiv.scrollTop = chatDiv.scrollHeight;
                 }
             }
+
+            function speakVoice(lang) {
+                let text = "";
+                let box = document.getElementById('voiceStatusBox');
+                let synth = window.speechSynthesis;
+                
+                if(lang === 'telugu') {
+                    text = "నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు ఇక్కడ మీ పాత వస్తువులను సులభంగా అమ్ముకోవచ్చు మరియు కొనుగోలు చేయవచ్చు.";
+                    box.innerHTML = "<b>తెలుగు AI:</b> " + text;
+                } else if(lang === 'hindi') {
+                    text = "नमस्ते! Sell & Buy स्टोर में आपका स्वागत है। आप यहाँ अपने पुराने सामान आसानी से खरीद और बेच सकते हैं।";
+                    box.innerHTML = "<b>हिंदी AI:</b> " + text;
+                } else {
+                    text = "Hello and welcome to Sell and Buy store. You can easily buy and sell pre-owned items here.";
+                    box.innerHTML = "<b>English AI:</b> " + text;
+                }
+
+                let utterThis = new SpeechSynthesisUtterance(text);
+                synth.speak(utterThis);
+            }
         </script>
     </body>
     </html>
@@ -335,21 +374,23 @@ def index():
 def verify_otp_page():
   verify_html = """
     <!DOCTYPE html>
-    <html>
+    <html lang="te">
     <head>
+        <meta charset="UTF-8">
         <title>OTP Verification - Sell & Buy</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body { font-family: Arial, sans-serif; background-color: #f7f8f9; color: #002f34; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-            .box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 90%; max-width: 350px; text-align: center; }
-            input { width: 100%; padding: 10px; margin: 10px 0; font-size: 20px; text-align: center; letter-spacing: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-            button { background: #002f34; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; font-size: 15px; cursor: pointer; }
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f6f8; color: #002f34; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+            .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); width: 90%; max-width: 360px; text-align: center; }
+            input { width: 100%; padding: 12px; margin: 15px 0; font-size: 24px; text-align: center; letter-spacing: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; outline: none; }
+            input:focus { border-color: #002f34; }
+            button { background: #002f34; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
         </style>
     </head>
     <body>
         <div class="box">
-            <h3 style="color: #002f34; margin-top: 0;">మొబైల్ SMS OTP వెరిఫికేషన్</h3>
-            <p style="font-size: 13px; color: #666;">మీ మొబైల్ నంబర్‌కు SMS ద్వారా పంపబడిన 4 అంకెల కోడ్‌ని ఇక్కడ ఎంటర్ చేయండి.</p>
+            <h3 style="color: #002f34; margin-top: 0;">ఈమెయిల్ OTP వెరిఫికేషన్</h3>
+            <p style="font-size: 13px; color: #666;">మీ ఈమెయిల్‌కు పంపబడిన 4 అంకెల కోడ్‌ని ఇక్కడ ఎంటర్ చేయండి.</p>
             <form action="/verify_otp" method="POST">
                 <input type="text" name="entered_otp" required placeholder="XXXX" maxlength="4">
                 <button type="submit">వెరిఫై చేసి లాగిన్ అవ్వండి</button>
@@ -405,7 +446,58 @@ def my_ads_page():
   ads = cursor.fetchall()
   conn.close()
 
-  return "My Ads Page Loaded Successfully"
+  ads_html = """
+    <!DOCTYPE html>
+    <html lang="te">
+    <head>
+        <meta charset="UTF-8">
+        <title>My Ads - Sell & Buy</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background-color: #f4f6f8; color: #002f34; }
+            .header { background: #002f34; color: white; padding: 15px 20px; display: flex; align-items: center; gap: 15px; }
+            .header a { color: #ffce32; text-decoration: none; font-size: 20px; }
+            .container { padding: 20px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }
+            .ad-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e8eb; padding: 12px 0; }
+            .ad-info { display: flex; gap: 14px; align-items: center; }
+            .ad-info img { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; background: #eee; }
+            .delete-btn { background: #d9534f; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <a href="/">←</a>
+            <h2 style="margin:0; font-size: 18px;">నా ప్రకటనలు (My Ads & Management)</h2>
+        </div>
+
+        <div class="container">
+            <h3>మీరు పోస్ట్ చేసిన ప్రకటనలు:</h3>
+    """
+
+  if ads:
+    for ad in ads:
+      ads_html += f"""
+            <div class="ad-item">
+                <div class="ad-info">
+                    <img src="{ad[7]}" onerror="this.src='https://via.placeholder.com/55x55?text=Img';">
+                    <div>
+                        <b>{ad[1]}</b><br>
+                        <span style="font-size: 13px; color: #2e7d32; font-weight: bold;">₹ {ad[4]}</span><br>
+                        <span style="font-size: 11px; color: #777;">Posted on: {ad[9]}</span>
+                    </div>
+                </div>
+                <a href="/delete_ad/{ad[0]}" class="delete-btn" onclick="return confirm('మీరు ఈ యాడ్ ని డిలీట్ చేయాలనుకుంటున్నారా?');">Delete</a>
+            </div>
+            """
+  else:
+    ads_html += "<p style='color: #777;'>ఇక్కడ ఎలాంటి యాడ్స్ లేవు.</p>"
+
+  ads_html += """
+        </div>
+    </body>
+    </html>
+    """
+  return ads_html
 
 
 @app.route('/product/<int:product_id>')
@@ -421,35 +513,36 @@ def product_detail(product_id):
   conn.close()
 
   if not p:
-    return 'ప్రొడక్ట్ కనుగొనబడలేదు!'
+    return 'ప్రొడక్ట్ కనుగొనబడలేదు!', 404
 
   detail_html = f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="te">
     <head>
+        <meta charset="UTF-8">
         <title>{p[1]} - Sell & Buy</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 0; background-color: #f7f8f9; color: #002f34; }}
-            .header {{ background: #002f34; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 15px; }}
+            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background-color: #f4f6f8; color: #002f34; }}
+            .header {{ background: #002f34; color: white; padding: 15px 20px; display: flex; align-items: center; gap: 15px; }}
             .header a {{ color: #ffce32; text-decoration: none; font-size: 20px; }}
-            .container {{ padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }}
-            .prod-img {{ width: 100%; height: 280px; object-fit: cover; border-radius: 8px; background: #eee; }}
-            .price {{ font-size: 24px; font-weight: bold; color: #002f34; margin: 10px 0; }}
-            .title {{ font-size: 20px; font-weight: bold; margin: 5px 0; }}
-            .details-box {{ background: #f9f9f9; padding: 12px; border-radius: 6px; margin: 15px 0; border: 1px solid #eee; }}
-            .action-btns {{ display: flex; gap: 10px; margin-top: 20px; }}
-            .action-btns a {{ flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; color: white; font-size: 15px; text-align: center; text-decoration: none; display: block; }}
+            .container {{ padding: 20px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }}
+            .prod-img {{ width: 100%; height: 300px; object-fit: cover; border-radius: 10px; background: #eee; }}
+            .price {{ font-size: 26px; font-weight: bold; color: #002f34; margin: 12px 0; }}
+            .title {{ font-size: 22px; font-weight: bold; margin: 5px 0; }}
+            .details-box {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 18px 0; border: 1px solid #e5e8eb; }}
+            .action-btns {{ display: flex; gap: 12px; margin-top: 25px; }}
+            .action-btns a {{ flex: 1; padding: 14px; border-radius: 8px; font-weight: bold; color: white; font-size: 15px; text-align: center; text-decoration: none; display: block; }}
         </style>
     </head>
     <body>
         <div class="header">
-            <a href="/">← వెనుకకు</a>
+            <a href="/">←</a>
             <h2 style="margin:0; font-size: 18px;">ప్రొడక్ట్ వివరాలు</h2>
         </div>
 
         <div class="container">
-            <img src="{p[7]}" class="prod-img" onerror="this.src='https://via.placeholder.com/400x280?text=No+Image';">
+            <img src="{p[7]}" class="prod-img" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image';">
             <div class="price">₹ {p[4]}</div>
             <div class="title">{p[1]}</div>
             
@@ -460,12 +553,12 @@ def product_detail(product_id):
                 <p><b>వివరాలు:</b> {p[6]}</p>
             </div>
 
-            <div style="width: 100%; height: 160px; margin: 15px 0; border-radius: 6px; overflow: hidden; border: 1px solid #ccc;">
-                <iframe width="100%" height="160" style="border:0;" loading="lazy" src="https://maps.google.com/maps?q={p[5]}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>
+            <div style="width: 100%; height: 180px; margin: 15px 0; border-radius: 8px; overflow: hidden; border: 1px solid #ccc;">
+                <iframe width="100%" height="180" style="border:0;" loading="lazy" src="https://maps.google.com/maps?q={p[5]}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>
             </div>
 
             <div class="action-btns">
-                <a href="tel:{p[8]}" style="background: #28a745;">📞 డైరెక్ట్ కాల్ చేయండి</a>
+                <a href="tel:{p[8]}" style="background: #28a745;">📞 డైరెక్ట్ కాల్</a>
                 <a href="#" onclick="alert('చాట్ బాక్స్ ఓపెన్ అయింది!');" style="background: #007bff;">💬 చాట్ చేయండి</a>
             </div>
         </div>
@@ -525,13 +618,20 @@ def upload_file():
     return f'ఎర్రర్ వచ్చింది: {str(e)}'
 
 
+@app.route('/delete_ad/<int:ad_id>')
+def delete_ad(ad_id):
+  conn = sqlite3.connect('database.db')
+  cursor = conn.cursor()
+  cursor.execute('DELETE FROM products WHERE id = ?', (ad_id,))
+  conn.commit()
+  conn.close()
+  return redirect(url_for('my_ads_page'))
+
+
 @app.route('/send_otp', methods=['POST'])
 def send_otp():
   name = request.form.get('name')
-  raw_contact = request.form.get('contact').strip()
-
-  # Fast2SMS సాధారణంగా 10 అంకెల మొబైల్ నంబర్‌ను నేరుగా తీసుకుంటుంది (+91 అవసరం లేదు)
-  contact = raw_contact[-10:]
+  email = request.form.get('contact').strip()
 
   otp_code = str(random.randint(1000, 9999))
 
@@ -539,30 +639,31 @@ def send_otp():
   cursor = conn.cursor()
   cursor.execute(
       'INSERT OR REPLACE INTO otps (contact, otp_code) VALUES (?, ?)',
-      (contact, otp_code),
+      (email, otp_code),
   )
   conn.commit()
   conn.close()
 
-  # Fast2SMS ద్వారా ఓటీపీ పంపడం
   try:
-    url = 'https://www.fast2sms.com/dev/bulkV2'
-    querystring = {
-        'authorization': FAST2SMS_API_KEY,
-        'message': f'హలో {name}, మీ Sell & Buy యాప్ వెరిఫికేషన్ కోడ్ (OTP): {otp_code}',
-        'language': 'english',
-        'route': 'q',
-        'numbers': contact,
-    }
-    headers = {'cache-control': 'no-cache'}
-    response = requests.request('GET', url, headers=headers, params=querystring)
-    print(f'Fast2SMS Response: {response.text}')
+    msg = email.message.EmailMessage()
+    msg.set_content(
+        f'హలో {name},\n\nమీ Sell & Buy Store వెరిఫికేషన్ కోడ్ (OTP):'
+        f' {otp_code}\n\nధన్యవాదాలు!'
+    )
+    msg['Subject'] = 'Sell & Buy Store - Login OTP Code'
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = email
+
+    server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+    server.login(SENDER_EMAIL, SENDER_PASSWORD)
+    server.send_message(msg)
+    server.quit()
   except Exception as e:
-    print(f'SMS ఎర్రర్: {e}')
+    print(f'Email Error: {e}')
 
   resp = redirect(url_for('verify_otp_page'))
   resp.set_cookie('temp_name', name, max_age=300)
-  resp.set_cookie('temp_contact', contact, max_age=300)
+  resp.set_cookie('temp_contact', email, max_age=300)
   return resp
 
 
