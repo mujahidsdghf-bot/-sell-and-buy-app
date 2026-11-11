@@ -2,15 +2,19 @@ from datetime import datetime
 import email.message
 import random
 import smtplib
+import socket
 from flask import Flask, redirect, render_template_string, request, url_for
 import sqlite3
 import boto3
+
+# SMTP టైమ్‌అవుట్ సెట్ చేయడం (Render సర్వర్ స్ట్రక్ కాకుండా ఉండటానికి)
+socket.setdefaulttimeout(10)
 
 app = Flask(__name__)
 app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 
 # ==========================================
-# మీ జీమెయిల్ వివరాలు ఇక్కడ రాయండి (స్పేస్‌లు లేకుండా)
+# మీ జీమెయిల్ వివరాలు ఇక్కడ ఉన్నాయి
 # ==========================================
 SENDER_EMAIL = 'mujahidsdghf@gmail.com'
 SENDER_PASSWORD = 'wnvlywnseerywvrs'
@@ -136,7 +140,7 @@ def index():
             .title { font-size: 14px; color: #444; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .loc { font-size: 12px; color: #777; margin-top: 4px; }
             
-            /* AI Voice Assistant Floating Button - Adjusted to avoid overlap */
+            /* AI Voice Assistant Floating Button */
             .ai-voice-btn { position: fixed; bottom: 75px; right: 15px; background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border-radius: 30px; padding: 10px 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(255,65,108,0.4); cursor: pointer; display: flex; align-items: center; gap: 6px; z-index: 95; font-size: 12px; border: 2px solid white; }
 
             .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 99; }
@@ -283,7 +287,7 @@ def index():
                     <button onclick="startListening()" style="background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border: none; border-radius: 25px; padding: 10px 16px; font-size: 13px; font-weight:bold; cursor:pointer;">🎙️ మాట్లాడటానికి నొక్కండి</button>
                 </div>
 
-                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 12px; border: 1px dashed #ccc; color: #333; text-align: left; max-height: 100px; overflow-y: auto;">
+                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 12px; border: 1px dashed #ccc; color: #333; text-align: left; max-height: 120px; overflow-y: auto;">
                     <b>AI:</b> నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీకు ఏ సహాయం కావాలి?
                 </div>
             </div>
@@ -347,13 +351,13 @@ def index():
             function setVoiceLang(lang) {
                 if(lang === 'te') {
                     currentLang = 'te-IN';
-                    speakAgent("নమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు కార్లు, మొబైల్స్ కొనుగోలు చేయవచ్చు లేదా అమ్మవచ్చు.", 'te-IN');
+                    speakAgent("నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు కార్లు, మొబైల్స్, బైకులు కొనుగోలు చేయవచ్చు లేదా మీ పాత వస్తువులను ఇక్కడ ఉచితంగా అమ్మవచ్చు. మీకు ఏ సహాయం కావాలి?", 'te-IN');
                 } else if(lang === 'hi') {
                     currentLang = 'hi-IN';
-                    speakAgent("नमस्ते! Sell & Buy स्टोर में आपका स्वागत है।", 'hi-IN');
+                    speakAgent("नमस्ते! Sell & Buy स्टोर में आपका स्वागत है। आप यहाँ कार, मोबाइल खरीद सकते हैं या अपना सामान बेच सकते हैं।", 'hi-IN');
                 } else {
                     currentLang = 'en-US';
-                    speakAgent("Welcome to Sell and Buy store. How can I help you?", 'en-US');
+                    speakAgent("Welcome to Sell and Buy store. You can buy cars, mobiles, bikes or sell your items here. How can I help you?", 'en-US');
                 }
             }
 
@@ -370,21 +374,43 @@ def index():
             function startListening() {
                 let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SpeechRecognition) {
-                    alert("వాయిస్ రికగ్నిషన్ సపోర్ట్ లేదు.");
+                    alert("వాయిస్ రికగ్నిషన్ సపోర్ట్ లేదు. క్రోమ్ బ్రౌజర్ వాడండి.");
                     return;
                 }
                 let recognition = new SpeechRecognition();
                 recognition.lang = currentLang;
                 recognition.interimResults = false;
-                document.getElementById('voiceStatusBox').innerHTML = "🎙️ వింటున్నాను...";
+                document.getElementById('voiceStatusBox').innerHTML = "🎙️ వింటున్నాను... మాట్లాడండి...";
+                
                 recognition.onresult = function(event) {
                     let speechResult = event.results[0][0].transcript.toLowerCase();
                     document.getElementById('voiceStatusBox').innerHTML = "<b>మీరు:</b> " + speechResult;
+                    
                     setTimeout(() => {
-                        let reply = "నేను మీ మాట విన్నాను. సెర్చ్ బార్ ఉపయోగించండి!";
+                        let reply = "";
+                        if (currentLang === 'te-IN') {
+                            if (speechResult.includes('అమ్ము') || speechResult.includes('sell') || speechResult.includes('post')) {
+                                reply = "ప్రకటన పోస్ట్ చేయడానికి కింది భాగంలో ఉన్న ప్లస్ (+) బటన్ పై క్లిక్ చేసి మీ వస్తువు వివరాలు మరియు ఫోటో అప్‌లోడ్ చేయండి.";
+                            } else if (speechResult.includes('కొను') || speechResult.includes('buy') || speechResult.includes('car')) {
+                                reply = "మీకు నచ్చిన కేటగిరీని పైన ఎంచుకోండి లేదా సెర్చ్ బార్‌లో వెతికి నేరుగా సెల్లర్‌కు కాల్ చేయవచ్చు.";
+                            } else if (speechResult.includes('login') || speechResult.includes('otp') || speechResult.includes('లాగిన్')) {
+                                reply = "లాగిన్ కావడానికి అకౌంట్ బటన్ పై క్లిక్ చేసి మీ ఈమెయిల్ ఇవ్వండి, మేము ఓటీపి పంపుతాము.";
+                            } else {
+                                reply = "నేను విన్నాను: '" + speechResult + "'. Sell & Buy స్టోర్ లో మీరు వస్తువులను కొనవచ్చు మరియు అమ్ముకోవచ్చు. ఇంకా ఏమైనా సహాయం కావాలా?";
+                            }
+                        } else if (currentLang === 'hi-IN') {
+                            reply = "मैंने सुना: '" + speechResult + "'. Sell & Buy स्टोर में आप आसानी से खरीद और बिक्री कर सकते हैं।";
+                        } else {
+                            reply = "I heard: '" + speechResult + "'. You can browse categories or post ads easily here.";
+                        }
                         speakAgent(reply, currentLang);
                     }, 800);
                 };
+                
+                recognition.onerror = function(event) {
+                    document.getElementById('voiceStatusBox').innerHTML = "❌ మైక్రోఫోన్ వాయిస్ అందలేదు. మళ్లీ ప్రయత్నించండి.";
+                };
+
                 recognition.start();
             }
         </script>
@@ -629,12 +655,12 @@ def send_otp():
     msg_obj['From'] = SENDER_EMAIL
     msg_obj['To'] = email_addr
 
-    server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+    server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
     server.login(SENDER_EMAIL, SENDER_PASSWORD)
     server.send_message(msg_obj)
     server.quit()
   except Exception as e:
-    return f'<h3>Email Sending Error:</h3><p style="color:red;">{str(e)}</p>'
+    return f'<h3>Email Sending Error:</h3><p style="color:red;">{str(e)}</p><a href="/">వెనక్కి వెళ్ళండి</a>'
 
   resp = redirect(url_for('verify_otp_page'))
   resp.set_cookie('temp_name', name, max_age=300)
