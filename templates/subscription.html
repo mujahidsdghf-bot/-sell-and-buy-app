@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>Subscription Plans</title>
+</head>
+<body style="font-family: Arial; background: #f2f4f5; text-align: center; padding-top: 50px;">
+    <div style="background: white; padding: 30px; display: inline-block; border-radius: 8px; max-width: 400px;">
+        <h2>సబ్‌స్క్రిప్షన్ ప్లాన్స్</h2>
+        {% if message %}
+            <p style="color: red;">{{ message }}</p>
+        {% endif %}
+        <hr>
+        <h3>నెలవారీ ప్లాన్</h3>
+        <p style="font-size: 22px; font-weight: bold; color: #002f34;">₹100 / నెలకి</p>
+        <p>అన్లిమిటెడ్ చాట్స్ & యాడ్స్</p>
+        <hr>
+        <h3>వార్షిక ప్లాన్</h3>
+        <p style="font-size: 22px; font-weight: bold; color: green;">₹599 / సంవత్సరం</p>
+        <br>
+        <button style="background: #002f34; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Buy Now</button>
+        <br><br>
+        <a href="/" style="text-decoration: none; color: #002f34;">← హోమ్ పేజీకి వెళ్ళండి</a>
+    </div>
+</body>
+</html>
