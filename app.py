@@ -9,9 +9,11 @@ import boto3
 app = Flask(__name__)
 app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 
-# మీ జీమెయిల్ వివరాలు ఇక్కడ ఇవ్వండి
-SENDER_EMAIL = 'mujahidsdghf@gmail.com'
-SENDER_PASSWORD = 'wnvl ywns eery wvrs'
+# ==========================================
+# మీ జీమెయిల్ వివరాలు ఇక్కడ రాయండి
+# ==========================================
+SENDER_EMAIL = 'mujahidsdghf@gmail.com'     # మీ నిజమైన జీమెయిల్ అడ్రస్ ఇక్కడ ఇవ్వండి
+SENDER_PASSWORD = 'wnvl ywns eery wvrs'     # గూగుల్ అకౌంట్ నుంచి తెచ్చుకున్న యాప్ పాస్‌వర్డ్ ఇక్కడ ఇవ్వండి
 
 S3_BUCKET = 'sellandbuy-app-storage'
 S3_REGION = 'eu-north-1'
@@ -90,7 +92,6 @@ def index():
     )
 
   products = cursor.fetchall()
-
   user_contact = request.cookies.get('user_contact')
   user = None
 
@@ -272,16 +273,16 @@ def index():
             <div class="modal-content" style="text-align: center;">
                 <span class="close" onclick="closeModal('aiVoiceModal')">&times;</span>
                 <h3 style="color: var(--primary);">🤖 AI Voice Assistant</h3>
-                <p style="font-size: 13px; color: #666;">మీకు ఏ భాషలో సహాయం కావాలి? (Select Language)</p>
+                <p style="font-size: 13px; color: #666;">భాషను ఎంచుకోండి (Select Language):</p>
                 
                 <div style="display: flex; gap: 10px; justify-content: center; margin: 15px 0;">
-                    <button onclick="speakVoice('telugu')" style="background: #28a745; width: auto; padding: 8px 12px; font-size: 12px;">తెలుగు 🇮🇳</button>
-                    <button onclick="speakVoice('hindi')" style="background: #ffc107; color: #000; width: auto; padding: 8px 12px; font-size: 12px;">हिंदी 🇮🇳</button>
-                    <button onclick="speakVoice('english')" style="background: #007bff; width: auto; padding: 8px 12px; font-size: 12px;">English 🌐</button>
+                    <button onclick="speakVoice('telugu')" style="background: #28a745; width: auto; padding: 10px 14px; font-size: 13px;">తెలుగు 🇮🇳</button>
+                    <button onclick="speakVoice('hindi')" style="background: #ffc107; color: #000; width: auto; padding: 10px 14px; font-size: 13px;">हिंदी 🇮🇳</button>
+                    <button onclick="speakVoice('english')" style="background: #007bff; width: auto; padding: 10px 14px; font-size: 13px;">English 🌐</button>
                 </div>
 
-                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 14px; border: 1px dashed #ccc;">
-                    భాషను ఎంచుకోండి, AI వాయిస్ ఏజెంట్ మాట్లాడటం ప్రారంభిస్తుంది.
+                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 14px; border: 1px dashed #ccc; color: #333;">
+                    పైన ఉన్న బటన్‌లపై క్లిక్ చేస్తే AI వాయిస్ ఏజెంట్ స్పష్టంగా మాట్లాడుతుంది!
                 </div>
             </div>
         </div>
@@ -345,23 +346,33 @@ def index():
             }
 
             function speakVoice(lang) {
+                if (!('speechSynthesis' in window)) {
+                    alert("మీ బ్రౌజర్ వాయిస్ స్పీచ్ సపోర్ట్ చేయదు.");
+                    return;
+                }
+                
+                window.speechSynthesis.cancel(); // మునుపటి స్పీచ్ ఉంటే ఆపడానికి
                 let text = "";
                 let box = document.getElementById('voiceStatusBox');
-                let synth = window.speechSynthesis;
+                let utterThis = new SpeechSynthesisUtterance();
                 
                 if(lang === 'telugu') {
                     text = "నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు ఇక్కడ మీ పాత వస్తువులను సులభంగా అమ్ముకోవచ్చు మరియు కొనుగోలు చేయవచ్చు.";
+                    utterThis.lang = 'te-IN';
                     box.innerHTML = "<b>తెలుగు AI:</b> " + text;
                 } else if(lang === 'hindi') {
                     text = "नमस्ते! Sell & Buy स्टोर में आपका स्वागत है। आप यहाँ अपने पुराने सामान आसानी से खरीद और बेच सकते हैं।";
+                    utterThis.lang = 'hi-IN';
                     box.innerHTML = "<b>हिंदी AI:</b> " + text;
                 } else {
                     text = "Hello and welcome to Sell and Buy store. You can easily buy and sell pre-owned items here.";
+                    utterThis.lang = 'en-US';
                     box.innerHTML = "<b>English AI:</b> " + text;
                 }
 
-                let utterThis = new SpeechSynthesisUtterance(text);
-                synth.speak(utterThis);
+                utterThis.text = text;
+                utterThis.rate = 1.0; 
+                window.speechSynthesis.speak(utterThis);
             }
         </script>
     </body>
