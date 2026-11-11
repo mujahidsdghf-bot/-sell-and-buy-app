@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>My Ads</title>
+</head>
+<body style="font-family: Arial; background: #f2f4f5; padding: 20px;">
+    <div style="max-width: 600px; margin: auto;">
+        <h2>నా యాడ్స్ (My Ads)</h2>
+        <a href="/" style="text-decoration: none; color: #002f34;">← హోమ్ పేజీ</a>
+        <hr>
+        {% for p in products %}
+        <div style="background: white; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
+            <h3>{{ p.title }} (₹{{ p.price }})</h3>
+            <p>స్థితి (Status): <b>{{ p.status }}</b></p>
+            {% if p.status == 'Active' %}
+                <a href="/update-ad/{{ p.id }}/Sold" style="background: green; color: white; padding: 5px 10px; text-decoration: none; border-radius: 3px; font-size: 13px;">Mark as Sold</a>
+                <a href="/update-ad/{{ p.id }}/Deleted" style="background: red; color: white; padding: 5px 10px; text-decoration: none; border-radius: 3px; font-size: 13px; margin-left: 10px;">Delete</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
