@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 
 # ==========================================
-# మీ జీమెయిల్ వివరాలు ఇక్కడ రాయండి
+# మీ జీమెయిల్ వివరాలు ఇక్కడ రాయండి (స్పేస్‌లు లేకుండా)
 # ==========================================
 SENDER_EMAIL = 'mujahidsdghf@gmail.com'
 SENDER_PASSWORD = 'wnvlywnseerywvrs'
@@ -114,7 +114,7 @@ def index():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             :root { --primary: #002f34; --accent: #ffce32; --bg: #f4f6f8; --text: #222; }
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg); color: var(--text); padding-bottom: 100px; }
             .header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
             .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
             .search-container { background: white; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px; }
@@ -136,19 +136,17 @@ def index():
             .title { font-size: 14px; color: #444; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .loc { font-size: 12px; color: #777; margin-top: 4px; }
             
-            /* AI Voice Assistant Floating Button */
-            .ai-voice-btn { position: fixed; bottom: 85px; right: 20px; background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border-radius: 50px; padding: 12px 20px; font-weight: bold; box-shadow: 0 4px 15px rgba(255,65,108,0.4); cursor: pointer; display: flex; align-items: center; gap: 8px; z-index: 98; font-size: 14px; border: 2px solid white; animation: pulse 2s infinite; }
-            @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+            /* AI Voice Assistant Floating Button - Adjusted to avoid overlap */
+            .ai-voice-btn { position: fixed; bottom: 75px; right: 15px; background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border-radius: 30px; padding: 10px 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(255,65,108,0.4); cursor: pointer; display: flex; align-items: center; gap: 6px; z-index: 95; font-size: 12px; border: 2px solid white; }
 
             .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 99; }
             .nav-item { text-align: center; font-size: 11px; color: #555; text-decoration: none; cursor: pointer; font-weight: 600; }
             .sell-btn-nav { background: var(--accent); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 26px; margin-top: -18px; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); color: var(--primary); }
             
-            .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); overflow-y: auto; }
-            .modal-content { background: white; margin: 8% auto; padding: 25px; width: 90%; max-width: 420px; border-radius: 14px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+            .modal { display: none; position: fixed; z-index: 105; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); overflow-y: auto; }
+            .modal-content { background: white; margin: 10% auto; padding: 20px; width: 90%; max-width: 400px; border-radius: 12px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
             .close { float: right; font-size: 24px; cursor: pointer; font-weight: bold; color: #666; }
-            .modal input, .modal select, .modal textarea { width: 100%; padding: 10px 12px; margin: 8px 0 14px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; }
-            .modal input:focus, .modal select:focus { border-color: var(--primary); }
+            .modal input, .modal select, .modal textarea { width: 100%; padding: 10px; margin: 6px 0 12px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; }
             .modal button { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 5px; }
         </style>
     </head>
@@ -214,22 +212,22 @@ def index():
 
         <!-- AI Voice Assistant Floating Button -->
         <div class="ai-voice-btn" onclick="openModal('aiVoiceModal')">
-            🎙️ AI Voice Chat Agent (తెలుగు/हिंदी/English)
+            🎙️ AI Voice Chat
         </div>
 
         <div class="bottom-nav">
             <a href="/" class="nav-item">🏠<br>Home</a>
-            <a href="#" onclick="openModal('chatModal')" class="nav-item">💬<br>Chats</a>
-            <a href="#" onclick="openModal('sellModal')" class="sell-btn-nav">+</a>
+            <a href="javascript:void(0);" onclick="openModal('chatModal')" class="nav-item">💬<br>Chats</a>
+            <a href="javascript:void(0);" onclick="openModal('sellModal')" class="sell-btn-nav">+</a>
             <a href="/my_ads" class="nav-item">📋<br>My Ads</a>
-            <a href="#" onclick="openModal('accountModal')" class="nav-item">👤<br>Account</a>
+            <a href="javascript:void(0);" onclick="openModal('accountModal')" class="nav-item">👤<br>Account</a>
         </div>
 
         <!-- Sell Modal -->
         <div id="sellModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('sellModal')">&times;</span>
-                <h3 style="color: var(--primary); margin-top:0;">కొత్త ప్రకటన పోస్ట్ చేయండి (Post Ad)</h3>
+                <h3 style="color: var(--primary); margin-top:0;">కొత్త ప్రకటన పోస్ట్ చేయండి</h3>
                 <form action="/upload" method="POST" enctype="multipart/form-data">
                     <label style="font-size: 13px; font-weight: bold;">వస్తువు పేరు:</label>
                     <input type="text" name="title" required placeholder="ఉదా: Hero Splendor Bike">
@@ -254,39 +252,39 @@ def index():
                     <label style="font-size: 13px; font-weight: bold;">లొకేషన్:</label>
                     <input type="text" name="location" required placeholder="ఉదా: Suraram, Hyderabad">
 
-                    <label style="font-size: 13px; font-weight: bold;">వివరాలు (Description):</label>
-                    <textarea name="description" rows="3" placeholder="వస్తువు కండిషన్ రాయండి..."></textarea>
+                    <label style="font-size: 13px; font-weight: bold;">వివరాలు:</label>
+                    <textarea name="description" rows="2" placeholder="కండిషన్ రాయండి..."></textarea>
                     
-                    <label style="font-size: 13px; font-weight: bold;">ఫోటో అప్‌లోడ్:</label>
+                    <label style="font-size: 13px; font-weight: bold;">ఫోటో:</label>
                     <input type="file" name="file" required style="border:none; padding: 0;">
 
-                    <label style="font-size: 13px; font-weight: bold;">మొబైల్ నంబర్ / కాంటాక్ట్:</label>
-                    <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Contact number">
+                    <label style="font-size: 13px; font-weight: bold;">కాంటాక్ట్ నంబర్:</label>
+                    <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Phone number">
                     
                     <button type="submit">ప్రకటన లైవ్ చేయండి</button>
                 </form>
             </div>
         </div>
 
-        <!-- AI Voice Assistant Modal (Advanced Conversational AI) -->
+        <!-- AI Voice Assistant Modal -->
         <div id="aiVoiceModal" class="modal">
             <div class="modal-content" style="text-align: center;">
                 <span class="close" onclick="closeModal('aiVoiceModal')">&times;</span>
-                <h3 style="color: var(--primary);">🤖 AI Voice Chat Agent</h3>
-                <p style="font-size: 13px; color: #666;">భాషను ఎంచుకోండి మరియు మాట్లాడండి:</p>
+                <h3 style="color: var(--primary);">🤖 AI Voice Agent</h3>
+                <p style="font-size: 13px; color: #666;">భాషను ఎంచుకోండి:</p>
                 
-                <div style="display: flex; gap: 8px; justify-content: center; margin: 12px 0;">
+                <div style="display: flex; gap: 6px; justify-content: center; margin: 10px 0;">
                     <button onclick="setVoiceLang('te')" style="background: #28a745; width: auto; padding: 8px 10px; font-size: 12px; color:white; border:none; border-radius:5px; cursor:pointer;">తెలుగు 🇮🇳</button>
                     <button onclick="setVoiceLang('hi')" style="background: #ffc107; color: #000; width: auto; padding: 8px 10px; font-size: 12px; border:none; border-radius:5px; cursor:pointer;">हिंदी 🇮🇳</button>
                     <button onclick="setVoiceLang('en')" style="background: #007bff; width: auto; padding: 8px 10px; font-size: 12px; color:white; border:none; border-radius:5px; cursor:pointer;">English 🌐</button>
                 </div>
 
-                <div style="margin: 12px 0;">
-                    <button onclick="startListening()" id="micBtn" style="background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border: none; border-radius: 30px; padding: 10px 18px; font-size: 14px; font-weight:bold; cursor:pointer;">🎙️ మాట్లాడటానికి ఇక్కడ నొక్కండి</button>
+                <div style="margin: 10px 0;">
+                    <button onclick="startListening()" style="background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border: none; border-radius: 25px; padding: 10px 16px; font-size: 13px; font-weight:bold; cursor:pointer;">🎙️ మాట్లాడటానికి నొక్కండి</button>
                 </div>
 
-                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 13px; border: 1px dashed #ccc; color: #333; max-height: 140px; overflow-y: auto; text-align: left;">
-                    <b>AI Agent:</b> నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు ఏ వస్తువు కొనాలనుకుంటున్నారు లేదా అమ్మాలనుకుంటున్నారు?
+                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 12px; border: 1px dashed #ccc; color: #333; text-align: left; max-height: 100px; overflow-y: auto;">
+                    <b>AI:</b> నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీకు ఏ సహాయం కావాలి?
                 </div>
             </div>
         </div>
@@ -295,28 +293,24 @@ def index():
         <div id="accountModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('accountModal')">&times;</span>
-                <h3>Customer Account & Profile</h3>
+                <h3>Customer Account</h3>
                 {% if user %}
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <div style="font-size: 50px;">👤</div>
+                    <div style="text-align: center; margin-bottom: 12px;">
+                        <div style="font-size: 40px;">👤</div>
                         <h4 style="margin: 5px 0;">{{ user[0] }}</h4>
                         <p style="font-size: 12px; color: #666; margin: 0;">📧 {{ user[1] }}</p>
-                        <p style="font-size: 11px; color: #888; margin-top: 5px;">జాయిన్ అయిన తేదీ: {{ user[2] }}</p>
                     </div>
-                    <div style="background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; text-align: center;">
-                        <b>Email OTP Verified & Secured ✅</b>
-                    </div>
-                    <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్ (Logout)</button>
+                    <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్</button>
                 {% else %}
                     <form action="/send_otp" method="POST">
-                        <h4 style="margin-top: 0; color: var(--primary);">📧 Email OTP లాగిన్ / రిజిస్ట్రేషన్</h4>
-                        <label style="font-size: 13px;">మీ పేరు (Name):</label>
-                        <input type="text" name="name" required placeholder="మీ పూర్తి పేరు">
+                        <h4 style="margin-top: 0; color: var(--primary);">📧 Email OTP లాగిన్</h4>
+                        <label style="font-size: 13px;">మీ పేరు:</label>
+                        <input type="text" name="name" required placeholder="పూర్తి పేరు">
                         
-                        <label style="font-size: 13px;">ఈమెయిల్ అడ్రస్ (Email):</label>
-                        <input type="email" name="contact" required placeholder="yourname@gmail.com">
+                        <label style="font-size: 13px;">ఈమెయిల్:</label>
+                        <input type="email" name="contact" required placeholder="email@gmail.com">
                         
-                        <button type="submit" style="background: var(--primary); color: white; font-weight: bold;">ఈమెయిల్‌కు OTP పంపు</button>
+                        <button type="submit">OTP పంపు</button>
                     </form>
                 {% endif %}
             </div>
@@ -326,12 +320,12 @@ def index():
         <div id="chatModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('chatModal')">&times;</span>
-                <h3>Live Chat with Seller</h3>
-                <div style="height: 160px; border: 1px solid #ddd; padding: 10px; overflow-y: auto; background: #fafafa; font-size: 13px; border-radius: 6px;" id="chatMessages">
+                <h3>Live Chat</h3>
+                <div style="height: 140px; border: 1px solid #ddd; padding: 8px; overflow-y: auto; background: #fafafa; font-size: 12px; border-radius: 6px;" id="chatMessages">
                     <p style="color: #888;">చాటింగ్ ప్రారంభించండి...</p>
                 </div>
-                <input type="text" id="chatInput" placeholder="సందేశం రాయండి...">
-                <button onclick="sendChatMessage()">సందేశం పంపు (Send)</button>
+                <input type="text" id="chatInput" placeholder="సందేశం...">
+                <button onclick="sendChatMessage()">సందేశం పంపు</button>
             </div>
         </div>
 
@@ -340,7 +334,7 @@ def index():
             function closeModal(id) { document.getElementById(id).style.display = 'none'; }
             
             function sendChatMessage() {
-                let msg = document.getElementById('chatInput'.value);
+                let msg = document.getElementById('chatInput').value;
                 if(msg && msg.trim() !== "") {
                     let chatDiv = document.getElementById('chatMessages');
                     chatDiv.innerHTML += "<p><b>మీరు:</b> " + msg + "</p>";
@@ -349,19 +343,17 @@ def index():
                 }
             }
 
-            // Advanced AI Voice Agent & Conversational Logic
             let currentLang = 'te-IN';
-
             function setVoiceLang(lang) {
                 if(lang === 'te') {
                     currentLang = 'te-IN';
-                    speakAgent("నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు కార్లు, మొబైల్స్, బైకులు కొనుగోలు చేయవచ్చు లేదా మీ పాత వస్తువులను ఇక్కడ ఉచితంగా అమ్మవచ్చు. మీకు ఏ సహాయం కావాలి?", 'te-IN');
+                    speakAgent("নమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. మీరు కార్లు, మొబైల్స్ కొనుగోలు చేయవచ్చు లేదా అమ్మవచ్చు.", 'te-IN');
                 } else if(lang === 'hi') {
                     currentLang = 'hi-IN';
-                    speakAgent("नमस्ते! Sell & Buy स्टोर में आपका स्वागत है। आप यहाँ कार, मोबाइल, बाइक खरीद सकते हैं या अपना सामान बेच सकते हैं। आपको क्या मदद चाहिए?", 'hi-IN');
+                    speakAgent("नमस्ते! Sell & Buy स्टोर में आपका स्वागत है।", 'hi-IN');
                 } else {
                     currentLang = 'en-US';
-                    speakAgent("Hello and welcome to Sell and Buy store. You can buy cars, mobiles, bikes, or sell your items here. How can I help you today?", 'en-US');
+                    speakAgent("Welcome to Sell and Buy store. How can I help you?", 'en-US');
                 }
             }
 
@@ -371,64 +363,28 @@ def index():
                 let utter = new SpeechSynthesisUtterance(text);
                 utter.lang = langCode;
                 utter.rate = 1.0;
-                document.getElementById('voiceStatusBox').innerHTML = "<b>AI Agent:</b> " + text;
-                let synth = window.speechSynthesis;
-                synth.speak(utter);
+                document.getElementById('voiceStatusBox').innerHTML = "<b>AI:</b> " + text;
+                window.speechSynthesis.speak(utter);
             }
 
             function startListening() {
                 let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SpeechRecognition) {
-                    alert("మీ బ్రౌజర్ వాయిస్ రికగ్నిషన్ సపోర్ట్ చేయదు. క్రోమ్ బ్రౌజర్ వాడండి.");
+                    alert("వాయిస్ రికగ్నిషన్ సపోర్ట్ లేదు.");
                     return;
                 }
-
                 let recognition = new SpeechRecognition();
                 recognition.lang = currentLang;
                 recognition.interimResults = false;
-                recognition.maxAlternatives = 1;
-
-                document.getElementById('voiceStatusBox').innerHTML = "🎙️ వింటున్నాను... దయచేసి మాట్లాడండి...";
-
+                document.getElementById('voiceStatusBox').innerHTML = "🎙️ వింటున్నాను...";
                 recognition.onresult = function(event) {
                     let speechResult = event.results[0][0].transcript.toLowerCase();
-                    let displayBox = document.getElementById('voiceStatusBox');
-                    displayBox.innerHTML = "<p><b>మీరు:</b> " + speechResult + "</p>";
-                    
-                    // Smart Conversational Knowledge Base for AI Agent
+                    document.getElementById('voiceStatusBox').innerHTML = "<b>మీరు:</b> " + speechResult;
                     setTimeout(() => {
-                        let reply = "";
-                        if (currentLang === 'te-IN') {
-                            if (speechResult.includes('అమ్ము') || speechResult.includes('sell') || speechResult.includes('post')) {
-                                reply = "ప్రకటన పోస్ట్ చేయడానికి కింది భాగంలో ఉన్న ప్లస్ (+) బటన్ పై క్లిక్ చేసి మీ వస్తువు వివరాలు మరియు ఫోటో అప్‌లోడ్ చేయండి.";
-                            } else if (speechResult.includes('కొను') || speechResult.includes('buy') || speechResult.includes 'car' || speechResult.includes('bike')) {
-                                reply = "మీకు నచ్చిన కేటగిరీని పైన ఎంచుకోండి లేదా సెర్చ్ బార్‌లో వెతికి నేరుగా సెల్లర్‌కు కాల్ చేయవచ్చు.";
-                            } else if (speechResult.includes('login') || speechResult.includes('otp') || speechResult.includes('మొబైల్') || speechResult.includes('ఈమెయిల్')) {
-                                reply = "లాగిన్ కావడానికి అకౌంట్ బటన్ పై క్లిక్ చేసి మీ ఈమెయిల్ ఇవ్వండి, మేము ఓటీపి పంపుతాము.";
-                            } else {
-                                reply = "నేను మీ మాట విన్నాను: '" + speechResult + "'. Sell & Buy స్టోర్ లో మీరు వస్తువులను కొనవచ్చు మరియు అమ్ముకోవచ్చు. ఇంకా ఏమైనా సహాయం కావాలా?";
-                            }
-                        } else if (currentLang === 'hi-IN') {
-                            if (speechResult.includes('bech') || speechResult.includes('sell')) {
-                                reply = "सामान बेचने के लिए नीचे दिए गए प्लस (+) बटन पर क्लिक करके विज्ञापन पोस्ट करें।";
-                            } else {
-                                reply = "मैंने सुना: '" + speechResult + "'. Sell & Buy स्टोर में आप आसानी से खरीद और बिक्री कर सकते हैं।";
-                            }
-                        } else {
-                            if (speechResult.includes('sell')) {
-                                reply = "To sell an item, click on the bottom plus (+) button and fill out your ad details.";
-                            } else {
-                                reply = "I heard: '" + speechResult + "'. You can browse categories or post ads easily here.";
-                            }
-                        }
+                        let reply = "నేను మీ మాట విన్నాను. సెర్చ్ బార్ ఉపయోగించండి!";
                         speakAgent(reply, currentLang);
                     }, 800);
                 };
-
-                recognition.onerror = function(event) {
-                    document.getElementById('voiceStatusBox').innerHTML = "❌ మైక్రోఫోన్ వాయిస్ అందలేదు. మళ్లీ ప్రయత్నించండి.";
-                };
-
                 recognition.start();
             }
         </script>
@@ -440,34 +396,32 @@ def index():
 
 @app.route('/verify_otp_page')
 def verify_otp_page():
-  verify_html = """
+  return """
     <!DOCTYPE html>
     <html lang="te">
     <head>
         <meta charset="UTF-8">
-        <title>OTP Verification - Sell & Buy</title>
+        <title>OTP Verification</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f6f8; color: #002f34; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-            .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); width: 90%; max-width: 360px; text-align: center; }
-            input { width: 100%; padding: 12px; margin: 15px 0; font-size: 24px; text-align: center; letter-spacing: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; outline: none; }
-            input:focus { border-color: #002f34; }
-            button { background: #002f34; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
+            body { font-family: Tahoma, sans-serif; background: #f4f6f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+            .box { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 340px; text-align: center; }
+            input { width: 100%; padding: 12px; margin: 15px 0; font-size: 22px; text-align: center; letter-spacing: 6px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+            button { background: #002f34; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
         </style>
     </head>
     <body>
         <div class="box">
-            <h3 style="color: #002f34; margin-top: 0;">ఈమెయిల్ OTP వెరిఫికేషన్</h3>
-            <p style="font-size: 13px; color: #666;">మీ ఈమెయిల్‌కు పంపబడిన 4 అంకెల కోడ్‌ని ఇక్కడ ఎంటర్ చేయండి.</p>
+            <h3>ఈమెయిల్ OTP వెరిఫికేషన్</h3>
+            <p style="font-size: 13px; color: #666;">కోడ్‌ని ఇక్కడ ఎంటర్ చేయండి.</p>
             <form action="/verify_otp" method="POST">
                 <input type="text" name="entered_otp" required placeholder="XXXX" maxlength="4">
-                <button type="submit">వెరిఫై చేసి లాగిన్ అవ్వండి</button>
+                <button type="submit">వెరిఫై చేయండి</button>
             </form>
         </div>
     </body>
     </html>
     """
-  return verify_html
 
 
 @app.route('/verify_otp', methods=['POST'])
@@ -498,8 +452,7 @@ def verify_otp():
   else:
     conn.close()
     return (
-        "<script>alert('తప్పు OTP లేదా కాలం చెల్లిన కోడ్! దయచేసి మళ్లీ"
-        " ప్రయత్నించండి.'); window.location.href='/';</script>"
+        "<script>alert('తప్పు OTP కోడ్!'); window.location.href='/';</script>"
     )
 
 
@@ -519,52 +472,41 @@ def my_ads_page():
     <html lang="te">
     <head>
         <meta charset="UTF-8">
-        <title>My Ads - Sell & Buy</title>
+        <title>My Ads</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background-color: #f4f6f8; color: #002f34; }
-            .header { background: #002f34; color: white; padding: 15px 20px; display: flex; align-items: center; gap: 15px; }
+            body { font-family: Tahoma, sans-serif; margin: 0; background: #f4f6f8; color: #002f34; }
+            .header { background: #002f34; color: white; padding: 15px; display: flex; align-items: center; gap: 15px; }
             .header a { color: #ffce32; text-decoration: none; font-size: 20px; }
-            .container { padding: 20px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }
-            .ad-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e8eb; padding: 12px 0; }
-            .ad-info { display: flex; gap: 14px; align-items: center; }
-            .ad-info img { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; background: #eee; }
-            .delete-btn { background: #d9534f; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; }
+            .container { padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; }
+            .ad-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 10px 0; }
+            .delete-btn { background: #d9534f; color: white; padding: 5px 12px; border-radius: 5px; text-decoration: none; font-size: 12px; font-weight: bold; }
         </style>
     </head>
     <body>
         <div class="header">
             <a href="/">←</a>
-            <h2 style="margin:0; font-size: 18px;">నా ప్రకటనలు (My Ads & Management)</h2>
+            <h3 style="margin:0;">నా ప్రకటనలు</h3>
         </div>
-
         <div class="container">
-            <h3>మీరు పోస్ట్ చేసిన ప్రకటనలు:</h3>
     """
-
   if ads:
     for ad in ads:
       ads_html += f"""
             <div class="ad-item">
-                <div class="ad-info">
-                    <img src="{ad[7]}" onerror="this.src='https://via.placeholder.com/55x55?text=Img';">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <img src="{ad[7]}" width="50" height="50" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/50';">
                     <div>
-                        <b>{ad[1]}</b><br>
-                        <span style="font-size: 13px; color: #2e7d32; font-weight: bold;">₹ {ad[4]}</span><br>
-                        <span style="font-size: 11px; color: #777;">Posted on: {ad[9]}</span>
+                        <b>{ad[1]}</b><br><span style="color:green; font-weight:bold;">₹ {ad[4]}</span>
                     </div>
                 </div>
-                <a href="/delete_ad/{ad[0]}" class="delete-btn" onclick="return confirm('మీరు ఈ యాడ్ ని డిలీట్ చేయాలనుకుంటున్నారా?');">Delete</a>
+                <a href="/delete_ad/{ad[0]}" class="delete-btn" onclick="return confirm('డిలీట్ చేయాలా?');">Delete</a>
             </div>
             """
   else:
-    ads_html += "<p style='color: #777;'>ఇక్కడ ఎలాంటి యాడ్స్ లేవు.</p>"
+    ads_html += '<p>యాడ్స్ ఏవీ లేవు.</p>'
 
-  ads_html += """
-        </div>
-    </body>
-    </html>
-    """
+  ads_html += '</div></body></html>'
   return ads_html
 
 
@@ -583,57 +525,23 @@ def product_detail(product_id):
   if not p:
     return 'ప్రొడక్ట్ కనుగొనబడలేదు!', 404
 
-  detail_html = f"""
+  return f"""
     <!DOCTYPE html>
     <html lang="te">
-    <head>
-        <meta charset="UTF-8">
-        <title>{p[1]} - Sell & Buy</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background-color: #f4f6f8; color: #002f34; }}
-            .header {{ background: #002f34; color: white; padding: 15px 20px; display: flex; align-items: center; gap: 15px; }}
-            .header a {{ color: #ffce32; text-decoration: none; font-size: 20px; }}
-            .container {{ padding: 20px; max-width: 600px; margin: auto; background: white; min-height: 100vh; box-sizing: border-box; }}
-            .prod-img {{ width: 100%; height: 300px; object-fit: cover; border-radius: 10px; background: #eee; }}
-            .price {{ font-size: 26px; font-weight: bold; color: #002f34; margin: 12px 0; }}
-            .title {{ font-size: 22px; font-weight: bold; margin: 5px 0; }}
-            .details-box {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 18px 0; border: 1px solid #e5e8eb; }}
-            .action-btns {{ display: flex; gap: 12px; margin-top: 25px; }}
-            .action-btns a {{ flex: 1; padding: 14px; border-radius: 8px; font-weight: bold; color: white; font-size: 15px; text-align: center; text-decoration: none; display: block; }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <a href="/">←</a>
-            <h2 style="margin:0; font-size: 18px;">ప్రొడక్ట్ వివరాలు</h2>
-        </div>
-
-        <div class="container">
-            <img src="{p[7]}" class="prod-img" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image';">
-            <div class="price">₹ {p[4]}</div>
-            <div class="title">{p[1]}</div>
-            
-            <div class="details-box">
-                <p><b>మోడల్:</b> {p[2]}</p>
-                <p><b>కేటగిరీ:</b> {p[3]}</p>
-                <p><b>లొకేషన్ & టైమ్:</b> 📍 {p[5]} &nbsp;|&nbsp; 🕒 {p[9]}</p>
-                <p><b>వివరాలు:</b> {p[6]}</p>
-            </div>
-
-            <div style="width: 100%; height: 180px; margin: 15px 0; border-radius: 8px; overflow: hidden; border: 1px solid #ccc;">
-                <iframe width="100%" height="180" style="border:0;" loading="lazy" src="https://maps.google.com/maps?q={p[5]}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>
-            </div>
-
-            <div class="action-btns">
-                <a href="tel:{p[8]}" style="background: #28a745;">📞 డైరెక్ట్ కాల్</a>
-                <a href="#" onclick="alert('చాట్ బాక్స్ ఓపెన్ అయింది!');" style="background: #007bff;">💬 చాట్ చేయండి</a>
-            </div>
+    <head><meta charset="UTF-8"><title>{p[1]}</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family:Tahoma; margin:0; background:#f4f6f8; padding:15px;">
+        <a href="/" style="text-decoration:none; font-size:18px; color:#002f34;">← వెనక్కి</a>
+        <div style="background:white; padding:15px; border-radius:10px; margin-top:10px;">
+            <img src="{p[7]}" style="width:100%; height:240px; object-fit:cover; border-radius:8px;">
+            <h2>₹ {p[4]}</h2>
+            <h3>{p[1]} ({p[2]})</h3>
+            <p>📍 <b>లొకేషన్:</b> {p[5]}</p>
+            <p>📝 <b>వివరాలు:</b> {p[6]}</p>
+            <a href="tel:{p[8]}" style="display:block; background:#28a745; color:white; text-align:center; padding:12px; border-radius:6px; text-decoration:none; font-weight:bold;">📞 కాల్ చేయండి</a>
         </div>
     </body>
     </html>
     """
-  return detail_html
 
 
 @app.route('/upload', methods=['POST'])
@@ -699,39 +607,38 @@ def delete_ad(ad_id):
 @app.route('/send_otp', methods=['POST'])
 def send_otp():
   name = request.form.get('name')
-  email = request.form.get('contact').strip()
-
+  email_addr = request.form.get('contact').strip()
   otp_code = str(random.randint(1000, 9999))
 
   conn = sqlite3.connect('database.db')
   cursor = conn.cursor()
   cursor.execute(
       'INSERT OR REPLACE INTO otps (contact, otp_code) VALUES (?, ?)',
-      (email, otp_code),
+      (email_addr, otp_code),
   )
   conn.commit()
   conn.close()
 
   try:
-    email_msg = email.message.EmailMessage()
-    email_msg.set_content(
+    msg_obj = email.message.EmailMessage()
+    msg_obj.set_content(
         f'హలో {name},\n\nమీ Sell & Buy Store వెరిఫికేషన్ కోడ్ (OTP):'
         f' {otp_code}\n\nధన్యవాదాలు!'
     )
-    email_msg['Subject'] = 'Sell & Buy Store - Login OTP Code'
-    email_msg['From'] = SENDER_EMAIL
-    email_msg['To'] = email
+    msg_obj['Subject'] = 'Sell & Buy Store - Login OTP Code'
+    msg_obj['From'] = SENDER_EMAIL
+    msg_obj['To'] = email_addr
 
     server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
     server.login(SENDER_EMAIL, SENDER_PASSWORD)
-    server.send_message(email_msg)
+    server.send_message(msg_obj)
     server.quit()
   except Exception as e:
-    return f'<h3>Email Sending Error:</h3><p style="color:red;">{str(e)}</p><a href="/"> వెనక్కి వెళ్ళండి</a>'
+    return f'<h3>Email Sending Error:</h3><p style="color:red;">{str(e)}</p>'
 
   resp = redirect(url_for('verify_otp_page'))
   resp.set_cookie('temp_name', name, max_age=300)
-  resp.set_cookie('temp_contact', email, max_age=300)
+  resp.set_cookie('temp_contact', email_addr, max_age=300)
   return resp
 
 
