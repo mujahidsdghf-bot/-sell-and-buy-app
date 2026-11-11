@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Account</title>
+</head>
+<body style="font-family: Arial; background: #f2f4f5; padding: 20px;">
+    <div style="max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; text-align: center;">
+        <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" alt="Profile" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #002f34;" onerror="this.src='https://via.placeholder.com/90';">
+        
+        <!-- ప్రొఫైల్ పిక్చర్ అప్‌డేట్ ఫారమ్ -->
+        <form action="/update-profile-pic" method="POST" enctype="multipart/form-data" style="margin: 10px 0;">
+            <input type="file" name="profile_pic" required style="font-size: 11px;">
+            <button type="submit" style="background: #002f34; color: white; border: none; padding: 4px 8px; border-radius: 3px;">ఫోటో మార్చు</button>
+        </form>
+
+        <h2>{{ user.email }}</h2>
+        <p>మిగిలిన ఫ్రీ యాడ్స్: <b>{{ user.free_ads_count }}</b> | మిగిలిన ఫ్రీ చాట్లు: <b>{{ user.free_chats_count }}</b></p>
+        <hr>
+        <p><b>మీ రెఫరల్ లింక్:</b></p>
+        <p style="background: #eee; padding: 8px; font-size: 13px;">sellandbuy.store/login?ref_code={{ user.referral_code }}</p>
+        <hr>
+        <a href="/my-ads" style="display: block; margin: 10px 0; text-decoration: none; color: #002f34;">📦 నా యాడ్స్ (My Ads)</a>
+        <a href="/settings" style="display: block; margin: 10px 0; text-decoration: none; color: #002f34;">⚙️ సెక్యూరిటీ & సెట్టింగ్స్</a>
+        <a href="/subscription" style="display: block; margin: 10px 0; text-decoration: none; color: green; font-weight: bold;">⭐ సబ్‌స్క్రిప్షన్ ప్లాన్స్</a>
+        <hr>
+        <a href="/" style="text-decoration: none; color: #002f34;">← హోమ్ పేజీ</a> | <a href="/logout" style="text-decoration: none; color: red; margin-left: 15px;">లాగౌట్</a>
+    </div>
+</body>
+</html>
