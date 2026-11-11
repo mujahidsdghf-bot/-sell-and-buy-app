@@ -11,7 +11,7 @@ app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 # ==========================================
 # Brevo API కాన్ఫిగరేషన్ (కొత్త API Key)
 # ==========================================
-BREVO_API_KEY = "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"
+BREVO_API_KEY = "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"
 SENDER_EMAIL = "mujahidsdghf@gmail.com"  # లేదా Brevo లో వెరిఫై అయిన ఈమెయిల్
 
 S3_BUCKET = 'sellandbuy-app-storage'
