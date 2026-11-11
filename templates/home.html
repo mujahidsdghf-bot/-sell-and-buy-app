@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>Sell & Buy Store - OLX Style</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f2f4f5; }
+        /* టాప్ హెడర్ */
+        .header { background: #002f34; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .logo-search { display: flex; align-items: center; gap: 20px; width: 60%; }
+        .logo { font-size: 22px; font-weight: bold; color: #ffcc00; text-decoration: none; }
+        .search-container { display: flex; flex-direction: column; width: 100%; gap: 5px; }
+        .search-box { padding: 8px; border-radius: 4px; border: none; width: 100%; }
+        .location-box { font-size: 13px; color: #ddd; display: flex; align-items: center; gap: 5px; }
+        
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .loc-display { font-size: 14px; background: #004d55; padding: 5px 10px; border-radius: 4px; }
+        
+        /* కేటగిరీలు */
+        .categories { display: flex; overflow-x: auto; padding: 15px; background: white; gap: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .cat-card { text-align: center; cursor: pointer; min-width: 80px; text-decoration: none; color: black; font-size: 14px; }
+        
+        /* ప్రొడక్ట్ గ్రిడ్ */
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; padding: 20px; }
+        .product-card { background: white; border: 1px solid #ddd; border-radius: 5px; padding: 10px; position: relative; }
+        .product-card h3 { margin: 10px 0 5px 0; font-size: 16px; }
+        .price { color: #002f34; font-weight: bold; font-size: 18px; }
+        .btn { background: #002f34; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 10px; width: 100%; text-align: center; }
+        
+        /* బాటమ్ నావిగేషన్ (OLX Style Footer Nav) */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); }
+        .nav-item { text-align: center; text-decoration: none; color: #555; font-size: 12px; }
+        .nav-item.sell-btn { background: #ffcc00; color: #002f34; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin-top: -10px; border: 3px solid white; }
+    </style>
+</head>
+<body>
+
+    <!-- 1 & 2. టాప్ బార్ (Logo, Search, Location, Login/Account) -->
+    <div class="header">
+        <div class="logo-search">
+            <a href="/" class="logo">Sell & Buy</a>
+            <div class="search-container">
+                <input type="text" class="search-box" placeholder="Find Cars, Mobile Phones and more...">
+                <div class="location-box">
+                    📍 <span>Suraram, Hyderabad</span>
+                </div>
+            </div>
+        </div>
+        <div class="user-section">
+            <div class="loc-display">📍 Suraram</div>
+            {% if session.get('user_email') %}
+                <a href="/account" style="color: white; text-decoration: none; font-weight: bold;">Account</a>
+            {% else %}
+                <a href="/login" style="color: #ffcc00; text-decoration: none; font-weight: bold;">Login / Signup</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- కేటగిరీలు (Categories Grid) -->
+    <div class="categories">
+        <a href="/?category=Cars" class="cat-card"><p>🚗 Cars</p></a>
+        <a href="/?category=Mobiles" class="cat-card"><p>📱 Mobiles</p></a>
+        <a href="/?category=Bikes" class="cat-card"><p>🏍️ Bikes</p></a>
+        <a href="/?category=Electronics" class="cat-card"><p>💻 Electronics</p></a>
+        <a href="/?category=Furniture" class="cat-card"><p>🛋️ Furniture</p></a>
+        <a href="/?category=Fashion" class="cat-card"><p>👕 Fashion</p></a>
+        <a href="/?category=Pets" class="cat-card"><p>🐶 Pets</p></a>
+        <a href="/?category=Other" class="cat-card"><p>📦 Other</p></a>
+    </div>
+
+    <!-- హోమ్ పేజీ ప్రొడక్ట్స్ (Long Page / Recommendations) -->
+    <div style="padding: 10px 20px;">
+        <h2>Fresh Recommendations</h2>
+    </div>
+    <div class="product-grid" style="margin-bottom: 60px;">
+        {% for p in products %}
+        <div class="product-card">
+            <div class="price">₹ {{ p.price }}</div>
+            <h3>{{ p.title }}</h3>
+            <p style="font-size: 12px; color: #777;">{{ p.location }}</p>
+            <a href="/product/{{ p.id }}" class="btn">View Details</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- OLX స్టైల్ బాటమ్ నావిగేషన్ (Home, Chats, Sell (+), My Ads, Account) -->
+    <div class="bottom-nav">
+        <a href="/" class="nav-item">🏠<br>Home</a>
+        <a href="/chats-list" class="nav-item">💬<br>Chats</a>
+        <a href="/post-ad" class="nav-item sell-btn">➕<br>SELL</a>
+        <a href="/my-ads" class="nav-item">📦<br>My Ads</a>
+        <a href="/account" class="nav-item">👤<br>Account</a>
+    </div>
+
+</body>
+</html>
