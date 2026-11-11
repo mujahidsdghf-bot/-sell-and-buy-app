@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+</head>
+<body style="font-family: Arial; background: #f2f4f5; padding: 20px;">
+    <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px;">
+        <h3>చాట్: {{ product.title }}</h3>
+        <hr>
+        <div style="height: 250px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; background: #fafafa;">
+            {% for c in chats %}
+                <p><b>{{ c.sender_email }}:</b> {{ c.message }}</p>
+            {% endfor %}
+        </div>
+        <form method="POST">
+            <input type="text" name="message" placeholder="సందేశం రాయండి..." required style="width: 78%; padding: 10px;">
+            <button type="submit" style="background: #002f34; color: white; padding: 10px 15px; border: none;">పంపు</button>
+        </form>
+        <br>
+        <a href="/" style="text-decoration: none; color: #002f34;">← హోమ్ పేజీ</a>
+    </div>
+</body>
+</html>
