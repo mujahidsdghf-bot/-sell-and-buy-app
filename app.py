@@ -9,9 +9,9 @@ app = Flask(__name__)
 app.secret_key = 'sellandbuy_advanced_secure_key_2026'
 
 # ==========================================
-# Brevo API కాన్ఫిగరేషన్ (మీరు ఇచ్చిన కీ)
+# Brevo API కాన్ఫిగరేషన్ (కొత్త API Key)
 # ==========================================
-BREVO_API_KEY = "Xsmtpsib-9f2e4793ec2011323cbf7e6281e2c0def184148640ca681d0aa769ccd91ff0e5-IkMSctd1ctOJdbM7"
+BREVO_API_KEY = "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"
 SENDER_EMAIL = "mujahidsdghf@gmail.com"  # లేదా Brevo లో వెరిఫై అయిన ఈమెయిల్
 
 S3_BUCKET = 'sellandbuy-app-storage'
@@ -651,7 +651,7 @@ def send_otp():
   conn.commit()
   conn.close()
 
-  # Brevo HTTP API ద్వారా ఈమెయిల్ పంపడం (Render సర్వర్‌లో 100% పనిచేస్తుంది)
+  # Brevo HTTP API ద్వారా ఈమెయిల్ పంపడం
   url = 'https://api.brevo.com/v3/smtp/email'
   headers = {
       'accept': 'application/json',
