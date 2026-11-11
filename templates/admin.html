@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+</head>
+<body style="font-family: Arial; background: #111; color: white; padding: 20px;">
+    <div style="max-width: 900px; margin: auto;">
+        <h1>🔒 సీక్రెట్ అడ్మిన్ డ్యాష్‌బోర్డ్</h1>
+        <hr style="border-color: #444;">
+        <h2>మొత్తం యూజర్లు: {{ users|length }}</h2>
+        <table border="1" style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background: #222;">
+            <tr style="background: #002f34;"><th style="padding: 8px;">ఈమెయిల్</th><th style="padding: 8px;">ఫ్రీ యాడ్స్</th><th style="padding: 8px;">అడ్మిన్?</th></tr>
+            {% for u in users %}
+            <tr><td style="padding: 8px;">{{ u.email }}</td><td style="padding: 8px; text-align: center;">{{ u.free_ads_count }}</td><td style="padding: 8px; text-align: center;">{{ u.is_admin }}</td></tr>
+            {% endfor %}
+        </table>
+        <h2>మొత్తం యాడ్స్: {{ products|length }}</h2>
+        <table border="1" style="width: 100%; border-collapse: collapse; background: #222;">
+            <tr style="background: #002f34;"><th style="padding: 8px;">టైటిల్</th><th style="padding: 8px;">ధర</th><th style="padding: 8px;">యూజర్</th></tr>
+            {% for p in products %}
+            <tr><td style="padding: 8px;">{{ p.title }}</td><td style="padding: 8px;">₹{{ p.price }}</td><td style="padding: 8px;">{{ p.user_email }}</td></tr>
+            {% endfor %}
+        </table>
+        <br>
+        <a href="/" style="color: #ffcc00; text-decoration: none;">← హోమ్ పేజీ</a>
+    </div>
+</body>
+</html>
