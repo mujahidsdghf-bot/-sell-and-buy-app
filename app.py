@@ -1,700 +1,281 @@
-from datetime import datetime
+import os
 import random
-from flask import Flask, redirect, render_template_string, request, url_for
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_sqlalchemy import SQLAlchemy
 import requests
-import sqlite3
-import boto3
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'sellandbuy_advanced_secure_key_2026'
+app.secret_key = "sellandbuy_super_secret_key_2026"
 
-import os
+# SQLite డేటాబేస్ సెటప్
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sellandbuy.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Render Environment Variable నుంచి Brevo API Key ని తీసుకోవడం
+# ప్రొఫైల్ పిక్చర్స్ అప్‌లోడ్ ఫోల్డర్
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+db = SQLAlchemy(app)
+
+# Brevo API Key (Render Environment Variable నుంచి)
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
-SENDER_EMAIL = "mujahidsdghf@gmail.com"  # మీ బ్రీవో లో వెరిఫై అయిన ఈమెయిల్
+SENDER_EMAIL = "mujahidsdghf@gmail.com"
 
-S3_BUCKET = 'sellandbuy-app-storage'
-S3_REGION = 'eu-north-1'
+# --- డేటాబేస్ టేబుల్స్ (Models) ---
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), default="Customer")
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    phone = db.Column(db.String(15), nullable=True)
+    profile_pic = db.Column(db.String(255), default="default.png")
+    referral_code = db.Column(db.String(20), unique=True)
+    referred_by = db.Column(db.String(20), nullable=True)
+    is_premium = db.Column(db.Boolean, default=False)
+    free_ads_count = db.Column(db.Integer, default=2)  # మొదటి 2 యాడ్స్ ఫ్రీ
+    free_chats_count = db.Column(db.Integer, default=5) # మొదటి 5 చాట్లు ఫ్రీ
+    is_admin = db.Column(db.Boolean, default=False)
 
-s3_client = boto3.client(
-    's3',
-    region_name=S3_REGION,
-    aws_access_key_id='AKIAXQ7HHUFVKYQCJIGP',
-    aws_secret_access_key='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',
-)
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    description = db.Column(db.Text)
+    location = db.Column(db.String(100), default="Suraram, Hyderabad")
+    image_url = db.Column(db.String(255), default="default_item.jpg")
+    user_email = db.Column(db.String(120), nullable=False)
+    status = db.Column(db.String(20), default="Active") # Active, Sold, Expired, Deleted
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Chat(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, nullable=False)
+    sender_email = db.Column(db.String(120), nullable=False)
+    receiver_email = db.Column(db.String(120), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-def init_db():
-  conn = sqlite3.connect('database.db', check_same_thread=False)
-  cursor = conn.cursor()
-  cursor.execute('''
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            model TEXT,
-            category TEXT NOT NULL,
-            price TEXT NOT NULL,
-            location TEXT NOT NULL,
-            description TEXT,
-            image_url TEXT NOT NULL,
-            seller_contact TEXT,
-            created_at TEXT
-        )
-    ''')
-  cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            contact TEXT,
-            joined_date TEXT
-        )
-    ''')
-  cursor.execute('''
-        CREATE TABLE IF NOT EXISTS otps (
-            contact TEXT PRIMARY KEY,
-            otp_code TEXT
-        )
-    ''')
-  conn.commit()
-  conn.close()
+with app.app_context():
+    db.create_all()
+    # అడ్మిన్ ఈమెయిల్ సెట్ చేయడం
+    admin_user = User.query.filter_by(email="mujahidsdghf@gmail.com").first()
+    if not admin_user:
+        admin = User(name="Syed Mujahid", email="mujahidsdghf@gmail.com", is_admin=True, referral_code="MUJAHIDADMIN")
+        db.session.add(admin)
+        db.session.commit()
 
-
-init_db()
-
-
-@app.after_request
-def add_security_headers(response):
-  response.headers['X-Content-Type-Options'] = 'nosniff'
-  response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-  response.headers['X-XSS-Protection'] = '1; mode=block'
-  return response
-
-
+# --- 1. హోమ్ పేజీ & కేటగిరీలు ---
 @app.route('/')
-def index():
-  cat_filter = request.args.get('category')
-  conn = sqlite3.connect('database.db')
-  cursor = conn.cursor()
+def home():
+    category = request.args.get('category')
+    search_query = request.args.get('q')
+    
+    query = Product.query.filter_by(status="Active")
+    if category:
+        query = query.filter_by(category=category)
+    if search_query:
+        query = query.filter(Product.title.ilike(f"%{search_query}%"))
+        
+    products = query.order_by(Product.id.desc()).all()
+    return render_template('home.html', products=products)
 
-  if cat_filter:
-    cursor.execute(
-        'SELECT id, title, model, category, price, location, description,'
-        ' image_url, seller_contact, created_at FROM products WHERE category = ?'
-        ' ORDER BY id DESC',
-        (cat_filter,),
-    )
-  else:
-    cursor.execute(
-        'SELECT id, title, model, category, price, location, description,'
-        ' image_url, seller_contact, created_at FROM products ORDER BY id DESC'
-    )
+# --- Brevo OTP ఫంక్షన్ ---
+def send_otp_via_brevo(to_email, otp_code):
+    if not BREVO_API_KEY:
+        return True 
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {"accept": "application/json", "api-key": BREVO_API_KEY, "content-type": "application/json"}
+    payload = {
+        "sender": {"name": "Sell & Buy Store", "email": SENDER_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": "Sell & Buy Store - Login OTP Code",
+        "htmlContent": f"<p>హలో,</p><p>మీ Sell & Buy Store వెరిఫికేషన్ కోడ్ (OTP): <b>{otp_code}</b></p><p>ధన్యవాదాలు!</p>"
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        return response.status_code == 201
+    except Exception as e:
+        print(f"Brevo API Error: {e}")
+        return False
 
-  products = cursor.fetchall()
-  user_contact = request.cookies.get('user_contact')
-  user = None
+# --- లాగిన్ & OTP రూట్స్ (2FA Security) ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        ref_code_input = request.form.get('ref_code')
+        otp = str(random.randint(1000, 9999))
+        session['pending_email'] = email
+        session['saved_otp'] = otp
+        session['pending_ref'] = ref_code_input
+        
+        success = send_otp_via_brevo(email, otp)
+        if success:
+            return redirect(url_for('verify_otp'))
+        else:
+            return "Brevo API Error: Could not send OTP."
+    return render_template('login.html')
 
-  if user_contact:
-    cursor.execute(
-        'SELECT name, contact, joined_date FROM users WHERE contact = ? LIMIT'
-        ' 1',
-        (user_contact,),
-    )
-    user = cursor.fetchone()
-
-  conn.close()
-
-  html_content = """
-    <!DOCTYPE html>
-    <html lang="te">
-    <head>
-        <meta charset="UTF-8">
-        <title>Sell & Buy Store - Advanced Marketplace</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            :root { --primary: #002f34; --accent: #ffce32; --bg: #f4f6f8; --text: #222; }
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg); color: var(--text); padding-bottom: 100px; }
-            .header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-            .logo-text { font-size: 22px; font-weight: bold; background: linear-gradient(45deg, #ffce32, #ff5722, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            .search-container { background: white; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px; }
-            .search-bar { display: flex; gap: 10px; align-items: center; border: 2px solid var(--primary); border-radius: 6px; padding: 8px 12px; background: #fff; }
-            .search-bar input { width: 100%; border: none; outline: none; font-size: 15px; }
-            .top-ad-banner { background: var(--accent); color: var(--primary); padding: 12px; text-align: center; font-weight: bold; font-size: 14px; border-bottom: 1px solid #e0b825; }
-            .categories { padding: 15px 20px; background: white; margin-top: 8px; }
-            .categories h3 { font-size: 16px; margin-bottom: 12px; color: var(--primary); }
-            .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center; }
-            .cat-item { background: #f1f3f5; padding: 14px 6px; border-radius: 10px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; color: var(--primary); transition: 0.2s; }
-            .cat-item:hover { background: var(--primary); color: white; transform: translateY(-2px); }
-            .section-title { padding: 20px 20px 10px 20px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
-            .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 0 15px; }
-            .product-card { background: white; border: 1px solid #e5e8eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.04); cursor: pointer; text-decoration: none; color: inherit; display: block; transition: 0.2s; }
-            .product-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
-            .product-card img { width: 100%; height: 160px; object-fit: cover; background: #eee; }
-            .product-info { padding: 12px; }
-            .price { font-size: 19px; font-weight: bold; color: var(--primary); margin: 4px 0; }
-            .title { font-size: 14px; color: #444; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .loc { font-size: 12px; color: #777; margin-top: 4px; }
-            
-            /* AI Voice Assistant Floating Button */
-            .ai-voice-btn { position: fixed; bottom: 75px; right: 15px; background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border-radius: 30px; padding: 10px 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(255,65,108,0.4); cursor: pointer; display: flex; align-items: center; gap: 6px; z-index: 95; font-size: 12px; border: 2px solid white; animation: pulse 2s infinite; }
-            @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-            .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 99; }
-            .nav-item { text-align: center; font-size: 11px; color: #555; text-decoration: none; cursor: pointer; font-weight: 600; }
-            .sell-btn-nav { background: var(--accent); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 26px; margin-top: -18px; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); color: var(--primary); }
-            
-            .modal { display: none; position: fixed; z-index: 105; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); overflow-y: auto; }
-            .modal-content { background: white; margin: 10% auto; padding: 20px; width: 90%; max-width: 400px; border-radius: 12px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-            .close { float: right; font-size: 24px; cursor: pointer; font-weight: bold; color: #666; }
-            .modal input, .modal select, .modal textarea { width: 100%; padding: 10px; margin: 6px 0 12px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; }
-            .modal button { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 5px; }
-        </style>
-    </head>
-    <body>
-
-        <div class="header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 22px;">⚡</span>
-                <div class="logo-text">Sell & Buy Store</div>
-            </div>
-            <span style="font-size: 13px; background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 20px;">📍 Hyderabad</span>
-        </div>
-
-        <div class="search-container">
-            <div class="search-bar">
-                <span>🔍</span>
-                <input type="text" placeholder="కార్లు, మొబైల్స్, బైకులు మరియు ఇతర వస్తువుల కోసం వెతకండి...">
-            </div>
-        </div>
-
-        <div class="top-ad-banner">
-            🚀 ప్రత్యేక ఆఫర్: మీ పాత వస్తువులను ఇక్కడ ఉచితంగా అమ్ముకోండి!
-        </div>
-
-        <div class="categories">
-            <h3>వస్తువుల కేటగిరీలు (Categories)</h3>
-            <div class="cat-grid">
-                <a href="/?category=Cars" class="cat-item">🚗 Cars</a>
-                <a href="/?category=Mobiles" class="cat-item">📱 Mobiles</a>
-                <a href="/?category=Bikes" class="cat-item">🏍️ Bikes</a>
-                <a href="/?category=Properties" class="cat-item">🏠 Properties</a>
-                <a href="/?category=Electronics" class="cat-item">💻 Electronics</a>
-                <a href="/?category=Furniture" class="cat-item">🛋️ Furniture</a>
-                <a href="/?category=Jobs" class="cat-item">💼 Jobs</a>
-                <a href="/?category=Others" class="cat-item">📦 Others</a>
-            </div>
-        </div>
-
-        <div class="section-title">
-            <span>తాజా ప్రకటనలు (Fresh Recommendations)</span>
-            <a href="/" style="font-size: 13px; color: var(--primary); text-decoration: none;">అన్నీ చూడండి</a>
-        </div>
-
-        <div class="product-grid">
-            {% if products %}
-                {% for p in products %}
-                    <a href="/product/{{ p[0] }}" class="product-card">
-                        <img src="{{ p[7] }}" alt="Item" onerror="this.src='https://via.placeholder.com/300x160?text=Image+Loading';">
-                        <div class="product-info">
-                            <div class="price">₹ {{ p[4] }}</div>
-                            <div class="title">{{ p[1] }} ({{ p[2] }})</div>
-                            <div class="loc">📍 {{ p[5] }}</div>
-                        </div>
-                    </a>
-                {% endfor %}
-            {% else %}
-                <div style="padding: 30px; text-align: center; color: #777; grid-column: span 2;">
-                    <p style="font-size: 16px; font-weight: bold;">ఈ కేటగిరీలో ఇంకా ఎలాంటి వస్తువులు లేవు!</p>
-                    <a href="/" style="color: var(--primary); text-decoration: underline;">అన్ని వస్తువులను చూడండి</a>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- AI Voice Assistant Floating Button -->
-        <div class="ai-voice-btn" onclick="openModal('aiVoiceModal')">
-            🎙️ Advanced AI Voice Agent
-        </div>
-
-        <div class="bottom-nav">
-            <a href="/" class="nav-item">🏠<br>Home</a>
-            <a href="javascript:void(0);" onclick="openModal('chatModal')" class="nav-item">💬<br>Chats</a>
-            <a href="javascript:void(0);" onclick="openModal('sellModal')" class="sell-btn-nav">+</a>
-            <a href="/my_ads" class="nav-item">📋<br>My Ads</a>
-            <a href="javascript:void(0);" onclick="openModal('accountModal')" class="nav-item">👤<br>Account</a>
-        </div>
-
-        <!-- Sell Modal -->
-        <div id="sellModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('sellModal')">&times;</span>
-                <h3 style="color: var(--primary); margin-top:0;">కొత్త ప్రకటన పోస్ట్ చేయండి</h3>
-                <form action="/upload" method="POST" enctype="multipart/form-data">
-                    <label style="font-size: 13px; font-weight: bold;">వస్తువు పేరు:</label>
-                    <input type="text" name="title" required placeholder="ఉదా: Hero Splendor Bike">
-                    
-                    <label style="font-size: 13px; font-weight: bold;">మోడల్ (Model):</label>
-                    <input type="text" name="model" required placeholder="ఉదా: 2021 Model">
-
-                    <label style="font-size: 13px; font-weight: bold;">కేటగిరీ:</label>
-                    <select name="category">
-                        <option value="Bikes">Bikes</option>
-                        <option value="Cars">Cars</option>
-                        <option value="Mobiles">Mobiles</option>
-                        <option value="Properties">Properties</option>
-                        <option value="Electronics">Electronics</option>
-                        <option value="Furniture">Furniture</option>
-                        <option value="Others">Others</option>
-                    </select>
-
-                    <label style="font-size: 13px; font-weight: bold;">ధర (Rs):</label>
-                    <input type="text" name="price" required placeholder="ఉదా: 45000">
-
-                    <label style="font-size: 13px; font-weight: bold;">లొకేషన్:</label>
-                    <input type="text" name="location" required placeholder="ఉదా: Suraram, Hyderabad">
-
-                    <label style="font-size: 13px; font-weight: bold;">వివరాలు:</label>
-                    <textarea name="description" rows="2" placeholder="కండిషన్ రాయండి..."></textarea>
-                    
-                    <label style="font-size: 13px; font-weight: bold;">ఫోటో:</label>
-                    <input type="file" name="file" required style="border:none; padding: 0;">
-
-                    <label style="font-size: 13px; font-weight: bold;">కాంటాక్ట్ నంబర్:</label>
-                    <input type="text" name="seller_contact" value="{{ user[1] if user else '' }}" required placeholder="Phone number">
-                    
-                    <button type="submit">ప్రకటన లైవ్ చేయండి</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- AI Voice Assistant Modal -->
-        <div id="aiVoiceModal" class="modal">
-            <div class="modal-content" style="text-align: center;">
-                <span class="close" onclick="closeModal('aiVoiceModal')">&times;</span>
-                <h3 style="color: var(--primary);">🤖 Advanced AI Voice Agent</h3>
-                <p style="font-size: 13px; color: #666;">భాషను ఎంచుకోండి లేదా నేరుగా మాట్లాడండి:</p>
-                
-                <div style="display: flex; gap: 6px; justify-content: center; margin: 10px 0;">
-                    <button onclick="setVoiceLang('te')" style="background: #28a745; width: auto; padding: 8px 10px; font-size: 12px; color:white; border:none; border-radius:5px; cursor:pointer;">తెలుగు 🇮🇳</button>
-                    <button onclick="setVoiceLang('hi')" style="background: #ffc107; color: #000; width: auto; padding: 8px 10px; font-size: 12px; border:none; border-radius:5px; cursor:pointer;">हिंदी 🇮🇳</button>
-                    <button onclick="setVoiceLang('en')" style="background: #007bff; width: auto; padding: 8px 10px; font-size: 12px; color:white; border:none; border-radius:5px; cursor:pointer;">English 🌐</button>
-                </div>
-
-                <div style="margin: 10px 0;">
-                    <button onclick="startListening()" style="background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; border: none; border-radius: 25px; padding: 10px 18px; font-size: 14px; font-weight:bold; cursor:pointer;">🎙️ మాట్లాడటానికి నొక్కండి</button>
-                </div>
-
-                <div id="voiceStatusBox" style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 8px; font-size: 13px; border: 1px dashed #ccc; color: #333; text-align: left; max-height: 150px; overflow-y: auto;">
-                    <b>AI Agent:</b> నమస్కారం! నేను మీ పర్సనల్ ఏఐ అసిస్టెంట్‌ని. Sell & Buy స్టోర్ గురించి మీకు ఏ సమాచారం కావాలన్నా అడగండి!
-                </div>
-            </div>
-        </div>
-
-        <!-- Account Modal -->
-        <div id="accountModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('accountModal')">&times;</span>
-                <h3>Customer Account</h3>
-                {% if user %}
-                    <div style="text-align: center; margin-bottom: 12px;">
-                        <div style="font-size: 40px;">👤</div>
-                        <h4 style="margin: 5px 0;">{{ user[0] }}</h4>
-                        <p style="font-size: 12px; color: #666; margin: 0;">📧 {{ user[1] }}</p>
-                    </div>
-                    <button style="background: #d9534f;" onclick="location.href='/logout'">లాగౌట్</button>
-                {% else %}
-                    <form action="/send_otp" method="POST">
-                        <h4 style="margin-top: 0; color: var(--primary);">📧 Email OTP లాగిన్</h4>
-                        <label style="font-size: 13px;">మీ పేరు:</label>
-                        <input type="text" name="name" required placeholder="పూర్తి పేరు">
-                        
-                        <label style="font-size: 13px;">ఈమెయిల్:</label>
-                        <input type="email" name="contact" required placeholder="email@gmail.com">
-                        
-                        <button type="submit">OTP పంపు</button>
-                    </form>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Chats Modal -->
-        <div id="chatModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('chatModal')">&times;</span>
-                <h3>Live Chat</h3>
-                <div style="height: 140px; border: 1px solid #ddd; padding: 8px; overflow-y: auto; background: #fafafa; font-size: 12px; border-radius: 6px;" id="chatMessages">
-                    <p style="color: #888;">చాటింగ్ ప్రారంభించండి...</p>
-                </div>
-                <input type="text" id="chatInput" placeholder="సందేశం...">
-                <button onclick="sendChatMessage()">సందేశం పంపు</button>
-            </div>
-        </div>
-
-        <script>
-            function openModal(id) { document.getElementById(id).style.display = 'block'; }
-            function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-            
-            function sendChatMessage() {
-                let msg = document.getElementById('chatInput').value;
-                if(msg && msg.trim() !== "") {
-                    let chatDiv = document.getElementById('chatMessages');
-                    chatDiv.innerHTML += "<p><b>మీరు:</b> " + msg + "</p>";
-                    document.getElementById('chatInput').value = "";
-                    chatDiv.scrollTop = chatDiv.scrollHeight;
-                }
-            }
-
-            let currentLang = 'te-IN';
-            function setVoiceLang(lang) {
-                if(lang === 'te') {
-                    currentLang = 'te-IN';
-                    speakAgent("నమస్కారం! Sell & Buy స్టోర్‌కు స్వాగతం. ఇది కార్లు, మొబైల్స్, బైకులు కొనుగోలు చేయడానికి మరియు మీ పాత వస్తువులను ఉచితంగా అమ్ముకోవడానికి అత్యుత్తమ వేదిక. మీకు ఏమి కావాలి?", 'te-IN');
-                } else if(lang === 'hi') {
-                    currentLang = 'hi-IN';
-                    speakAgent("नमस्ते! Sell & Buy स्टोर में आपका स्वागत है। यहाँ आप कार, मोबाइल, बाइक खरीद और बेच सकते हैं। आपको क्या मदद चाहिए?", 'hi-IN');
-                } else {
-                    currentLang = 'en-US';
-                    speakAgent("Welcome to Sell and Buy store. This is your advanced marketplace to buy and sell cars, mobiles, bikes, and properties. How can I assist you?", 'en-US');
-                }
-            }
-
-            function speakAgent(text, langCode) {
-                if (!('speechSynthesis' in window)) return;
-                window.speechSynthesis.cancel();
-                let utter = new SpeechSynthesisUtterance(text);
-                utter.lang = langCode;
-                utter.rate = 1.0;
-                document.getElementById('voiceStatusBox').innerHTML = "<b>AI Agent:</b> " + text;
-                window.speechSynthesis.speak(utter);
-            }
-
-            function startListening() {
-                let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) {
-                    alert("మీ బ్రౌజర్ వాయిస్ రికగ్నిషన్ సపోర్ట్ చేయదు.");
-                    return;
-                }
-                let recognition = new SpeechRecognition();
-                recognition.lang = currentLang;
-                recognition.interimResults = false;
-                document.getElementById('voiceStatusBox').innerHTML = "🎙️ వింటున్నాను... దయచేసి మాట్లాడండి...";
-                
-                recognition.onresult = function(event) {
-                    let speechResult = event.results[0][0].transcript.toLowerCase();
-                    document.getElementById('voiceStatusBox').innerHTML = "<b>మీరు:</b> " + speechResult;
-                    
-                    setTimeout(() => {
-                        let reply = "";
-                        if (currentLang === 'te-IN') {
-                            if (speechResult.includes('అమ్ము') || speechResult.includes('sell') || speechResult.includes('post') || speechResult.includes('ప్రకటన')) {
-                                reply = "వస్తువును అమ్మడానికి కింద ఉన్న ప్లస్ (+) బటన్ పై క్లిక్ చేసి మీ వస్తువు ఫోటో, పేరు, ధర మరియు లొకేషన్ వివరాలు ఇచ్చి లైవ్ చేయవచ్చు.";
-                            } else if (speechResult.includes('కొను') || speechResult.includes('buy') || speechResult.includes('car') || speechResult.includes('bike') || speechResult.includes('మొబైల్')) {
-                                reply = "కొనుగోలు చేయడానికి పైన ఉన్న కేటగిరీలు కార్స్, మొబైల్స్, బైక్స్ సెలెక్ట్ చేసుకోండి లేదా సెర్చ్ చేయండి. నేరుగా సెల్లర్‌కు కాల్ చేయవచ్చు.";
-                            } else if (speechResult.includes('login') || speechResult.includes('otp') || speechResult.includes('అకౌంట్') || speechResult.includes('లాగిన్')) {
-                                reply = "లాగిన్ కావడానికి బాటమ్ నావిగేషన్ లో ఉన్న అకౌంట్ (👤) బటన్ పై క్లిక్ చేయండి.";
-                            } else if (speechResult.includes('Location') || speechResult.includes('లొకేషన్') || speechResult.includes('అడ్రస్') || speechResult.includes('Hyderabad')) {
-                                reply = "ఈ వెబ్‌సైట్ ప్రధానంగా హైదరాబాద్ మరియు చుట్టుపక్కల ప్రాంతాల కోసం రూపొందించబడింది.";
-                            } else {
-                                reply = "నేను మీ మాట విన్నాను: '" + speechResult + "'. Sell & Buy స్టోర్ లో మీరు కార్లు, బైకులు, మొబైల్స్ కొనుగోలు చేయవచ్చు మరియు మీ పాత వస్తువులను ఉచితంగా అమ్ముకోవచ్చు!";
-                            }
-                        } else if (currentLang === 'hi-IN') {
-                            if (speechResult.includes('bech') || speechResult.includes('sell')) {
-                                reply = "सामान बेचने के लिए नीचे दिए गए (+) बटन पर क्लिक करके विज्ञापन पोस्ट करें।";
-                            } else {
-                                reply = "मैंने सुना: '" + speechResult + "'. Sell & Buy स्टोर में आप कार, बाइक, मोबाइल खरीद और बेच सकते हैं।";
-                            }
-                        } else {
-                            if (speechResult.includes('sell')) {
-                                reply = "To sell an item, click the bottom plus (+) button to post your ad with photos and price.";
-                            } else {
-                                reply = "I heard: '" + speechResult + "'. You can browse categories or post ads easily on Sell and Buy store.";
-                            }
-                        }
-                        speakAgent(reply, currentLang);
-                    }, 800);
-                };
-                
-                recognition.onerror = function(event) {
-                    document.getElementById('voiceStatusBox').innerHTML = "❌ మైక్రోఫోన్ వాయిస్ అందలేదు. మళ్లీ ప్రయత్నించండి.";
-                };
-
-                recognition.start();
-            }
-        </script>
-    </body>
-    </html>
-    """
-  return render_template_string(html_content, products=products, user=user)
-
-
-@app.route('/verify_otp_page')
-def verify_otp_page():
-  return """
-    <!DOCTYPE html>
-    <html lang="te">
-    <head>
-        <meta charset="UTF-8">
-        <title>OTP Verification</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body { font-family: Tahoma, sans-serif; background: #f4f6f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-            .box { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 340px; text-align: center; }
-            input { width: 100%; padding: 12px; margin: 15px 0; font-size: 22px; text-align: center; letter-spacing: 6px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-            button { background: #002f34; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        </style>
-    </head>
-    <body>
-        <div class="box">
-            <h3>ఈమెయిల్ OTP వెరిఫికేషన్</h3>
-            <p style="font-size: 13px; color: #666;">కోడ్‌ని ఇక్కడ ఎంటర్ చేయండి.</p>
-            <form action="/verify_otp" method="POST">
-                <input type="text" name="entered_otp" required placeholder="XXXX" maxlength="4">
-                <button type="submit">వెరిఫై చేయండి</button>
-            </form>
-        </div>
-    </body>
-    </html>
-    """
-
-
-@app.route('/verify_otp', methods=['POST'])
+@app.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
-  entered_otp = request.form.get('entered_otp').strip()
-  contact = request.cookies.get('temp_contact')
-  name = request.cookies.get('temp_name')
+    if request.method == 'POST':
+        user_otp = request.form.get('otp')
+        if user_otp == session.get('saved_otp'):
+            email = session.get('pending_email')
+            ref_code_input = session.get('pending_ref')
+            session['user_email'] = email
+            
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                new_ref = f"REF{random.randint(10000,99999)}"
+                new_user = User(name="Customer", email=email, referral_code=new_ref, referred_by=ref_code_input)
+                db.session.add(new_user)
+                db.session.commit()
+                
+            return redirect(url_for('home'))
+        else:
+            return "Invalid OTP. Please try again."
+    return render_template('verify_otp.html')
 
-  conn = sqlite3.connect('database.db')
-  cursor = conn.cursor()
-  cursor.execute('SELECT otp_code FROM otps WHERE contact = ?', (contact,))
-  row = cursor.fetchone()
-
-  if row and row[0] == entered_otp:
-    joined_date = datetime.now().strftime('%d-%m-%Y')
-    cursor.execute(
-        'INSERT OR IGNORE INTO users (name, contact, joined_date) VALUES (?, ?,'
-        ' ?)',
-        (name, contact, joined_date),
-    )
-    cursor.execute('DELETE FROM otps WHERE contact = ?', (contact,))
-    conn.commit()
-    conn.close()
-
-    resp = redirect(url_for('index'))
-    resp.set_cookie('user_contact', contact, max_age=60 * 60 * 24 * 30)
-    return resp
-  else:
-    conn.close()
-    return (
-        "<script>alert('తప్పు OTP కోడ్!'); window.location.href='/';</script>"
-    )
-
-
-@app.route('/my_ads')
-def my_ads_page():
-  conn = sqlite3.connect('database.db')
-  cursor = conn.cursor()
-  cursor.execute(
-      'SELECT id, title, model, category, price, location, description,'
-      ' image_url, seller_contact, created_at FROM products ORDER BY id DESC'
-  )
-  ads = cursor.fetchall()
-  conn.close()
-
-  ads_html = """
-    <!DOCTYPE html>
-    <html lang="te">
-    <head>
-        <meta charset="UTF-8">
-        <title>My Ads</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body { font-family: Tahoma, sans-serif; margin: 0; background: #f4f6f8; color: #002f34; }
-            .header { background: #002f34; color: white; padding: 15px; display: flex; align-items: center; gap: 15px; }
-            .header a { color: #ffce32; text-decoration: none; font-size: 20px; }
-            .container { padding: 15px; max-width: 600px; margin: auto; background: white; min-height: 100vh; }
-            .ad-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 10px 0; }
-            .delete-btn { background: #d9534f; color: white; padding: 5px 12px; border-radius: 5px; text-decoration: none; font-size: 12px; font-weight: bold; }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <a href="/">←</a>
-            <h3 style="margin:0;">నా ప్రకటనలు</h3>
-        </div>
-        <div class="container">
-    """
-  if ads:
-    for ad in ads:
-      ads_html += f"""
-            <div class="ad-item">
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <img src="{ad[7]}" width="50" height="50" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/50';">
-                    <div>
-                        <b>{ad[1]}</b><br><span style="color:green; font-weight:bold;">₹ {ad[4]}</span>
-                    </div>
-                </div>
-                <a href="/delete_ad/{ad[0]}" class="delete-btn" onclick="return confirm('డిలీట్ చేయాలా?');">Delete</a>
-            </div>
-            """
-  else:
-    ads_html += '<p>యాడ్స్ ఏవీ లేవు.</p>'
-
-  ads_html += '</div></body></html>'
-  return ads_html
-
-
+# --- 2. ప్రొడక్ట్ డీటెయిల్స్ పేజీ ---
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
-  conn = sqlite3.connect('database.db')
-  cursor = conn.cursor()
-  cursor.execute(
-      'SELECT id, title, model, category, price, location, description,'
-      ' image_url, seller_contact, created_at FROM products WHERE id = ?',
-      (product_id,),
-  )
-  p = cursor.fetchone()
-  conn.close()
+    product = Product.query.get_or_404(product_id)
+    return render_template('product_detail.html', product=product)
 
-  if not p:
-    return 'ప్రొడక్ట్ కనుగొనబడలేదు!', 404
+# --- 3. యాడ్ పోస్ట్ చేయడం & సబ్‌స్క్రిప్షన్ లిమిట్ చెక్ ---
+@app.route('/post-ad', methods=['GET', 'POST'])
+def post_ad():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(email=session['user_email']).first()
+    
+    if request.method == 'POST':
+        if user.free_ads_count <= 0 and not user.is_premium:
+            return redirect(url_for('subscription'))
+            
+        title = request.form.get('title')
+        category = request.form.get('category')
+        price = float(request.form.get('price', 0))
+        description = request.form.get('description')
+        location = request.form.get('location', 'Suraram, Hyderabad')
+        
+        new_product = Product(title=title, category=category, price=price, description=description, location=location, user_email=user.email)
+        db.session.add(new_product)
+        
+        if user.free_ads_count > 0:
+            user.free_ads_count -= 1
+            
+        db.session.commit()
+        return redirect(url_for('my_ads'))
+        
+    return render_template('post_ad.html', user=user)
 
-  return f"""
-    <!DOCTYPE html>
-    <html lang="te">
-    <head><meta charset="UTF-8"><title>{p[1]}</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="font-family:Tahoma; margin:0; background:#f4f6f8; padding:15px;">
-        <a href="/" style="text-decoration:none; font-size:18px; color:#002f34;">← వెనక్కి</a>
-        <div style="background:white; padding:15px; border-radius:10px; margin-top:10px;">
-            <img src="{p[7]}" style="width:100%; height:240px; object-fit:cover; border-radius:8px;">
-            <h2>₹ {p[4]}</h2>
-            <h3>{p[1]} ({p[2]})</h3>
-            <p>📍 <b>లొకేషన్:</b> {p[5]}</p>
-            <p>📝 <b>వివరాలు:</b> {p[6]}</p>
-            <a href="tel:{p[8]}" style="display:block; background:#28a745; color:white; text-align:center; padding:12px; border-radius:6px; text-decoration:none; font-weight:bold;">📞 కాల్ చేయండి</a>
-        </div>
-    </body>
-    </html>
-    """
+# --- సబ్‌స్క్రిప్షన్ పేజీ (₹100/mo లేదా ₹599/yr) ---
+@app.route('/subscription')
+def subscription():
+    return render_template('subscription.html')
 
+# --- 4. మై యాడ్స్ పేజీ & మేనేజ్‌మెంట్ ---
+@app.route('/my-ads')
+def my_ads():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+    user_email = session['user_email']
+    products = Product.query.filter_by(user_email=user_email).all()
+    return render_template('my_ads.html', products=products)
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-  if 'file' not in request.files:
-    return 'ఫైల్ లేదు!'
-  file = request.files['file']
-  title = request.form.get('title')
-  model = request.form.get('model')
-  category = request.form.get('category')
-  price = request.form.get('price')
-  location = request.form.get('location')
-  description = request.form.get('description')
-  seller_contact = request.form.get('seller_contact')
-  created_at = datetime.now().strftime('%d-%m-%Y %H:%M')
+@app.route('/update-ad/<int:ad_id>/<status>')
+def update_ad(ad_id, status):
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+    product = Product.query.get_or_404(ad_id)
+    if product.user_email == session['user_email']:
+        product.status = status # Active, Sold, Deleted
+        db.session.commit()
+    return redirect(url_for('my_ads'))
 
-  if file.filename == '':
-    return 'ఫైల్ సెలెక్ట్ చేయలేదు'
+# --- 5 & 7. చాట్ పేజీ & చాట్ లిమిట్స్ ---
+@app.route('/chat/<int:product_id>', methods=['GET', 'POST'])
+def chat(product_id):
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.filter_by(email=session['user_email']).first()
+    product = Product.query.get_or_404(product_id)
+    
+    if user.free_chats_count <= 0 and not user.is_premium:
+        return render_template('subscription.html', message="మీ ఉచిత చాట్లు ముగిశాయి. అన్లిమిటెడ్ చాట్స్ కోసం సబ్‌స్క్రిప్షన్ తీసుకోండి.")
 
-  try:
-    s3_client.upload_fileobj(
-        file, S3_BUCKET, file.filename, ExtraArgs={'ContentType': file.content_type}
-    )
-    image_url = (
-        f'https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file.filename}'
-    )
+    if request.method == 'POST':
+        msg_text = request.form.get('message')
+        receiver = product.user_email
+        new_chat = Chat(product_id=product_id, sender_email=user.email, receiver_email=receiver, message=msg_text)
+        db.session.add(new_chat)
+        
+        if user.free_chats_count > 0 and user.email != product.user_email:
+            user.free_chats_count -= 1
+            
+        db.session.commit()
+        return redirect(url_for('chat', product_id=product_id))
 
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute(
-        'INSERT INTO products (title, model, category, price, location,'
-        ' description, image_url, seller_contact, created_at) VALUES (?, ?, ?,'
-        ' ?, ?, ?, ?, ?, ?)',
-        (
-            title,
-            model,
-            category,
-            price,
-            location,
-            description,
-            image_url,
-            seller_contact,
-            created_at,
-        ),
-    )
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index'))
-  except Exception as e:
-    return f'ఎర్రర్ వచ్చింది: {str(e)}'
+    chats = Chat.query.filter_by(product_id=product_id).all()
+    return render_template('chat.html', product=product, chats=chats)
 
+# --- 2 & 8. కస్టమర్ అకౌంట్, ప్రొఫైల్ పిక్చర్ & రెఫరల్ ---
+@app.route('/account')
+def account():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(email=session['user_email']).first()
+    return render_template('account.html', user=user)
 
-@app.route('/delete_ad/<int:ad_id>')
-def delete_ad(ad_id):
-  conn = sqlite3.connect('database.db')
-  cursor = conn.cursor()
-  cursor.execute('DELETE FROM products WHERE id = ?', (ad_id,))
-  conn.commit()
-  conn.close()
-  return redirect(url_for('my_ads_page'))
+@app.route('/update-profile-pic', methods=['POST'])
+def update_profile_pic():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.filter_by(email=session['user_email']).first()
+    file = request.files.get('profile_pic')
+    
+    if file and file.filename != '':
+        filename = secure_filename(f"user_{user.id}_{file.filename}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        user.profile_pic = filename
+        db.session.commit()
+        
+    return redirect(url_for('account'))
 
+# --- 9. సెక్యూరిటీ & సెట్టింగ్స్ పేజీ ---
+@app.route('/settings')
+def settings():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(email=session['user_email']).first()
+    return render_template('settings.html', user=user)
 
-@app.route('/send_otp', methods=['POST'])
-def send_otp():
-  name = request.form.get('name')
-  email_addr = request.form.get('contact').strip()
-  otp_code = str(random.randint(1000, 9999))
-
-  conn = sqlite3.connect('database.db')
-  cursor = conn.cursor()
-  cursor.execute(
-      'INSERT OR REPLACE INTO otps (contact, otp_code) VALUES (?, ?)',
-      (email_addr, otp_code),
-  )
-  conn.commit()
-  conn.close()
-
-  # Brevo HTTP API ద్వారా ఈమెయిల్ పంపడం
-  url = 'https://api.brevo.com/v3/smtp/email'
-  headers = {
-      'accept': 'application/json',
-      'api-key': BREVO_API_KEY,
-      'content-type': 'application/json',
-  }
-  payload = {
-      'sender': {'name': 'Sell & Buy Store', 'email': SENDER_EMAIL},
-      'to': [{'email': email_addr, 'name': name}],
-      'subject': 'Sell & Buy Store - Login OTP Code',
-      'htmlContent': (
-          f'<p>హలో <b>{name}</b>,</p><p>మీ Sell & Buy Store వెరిఫికేషన్ కోడ్'
-          f' (OTP): <h2 style="color: #002f34;">{otp_code}</h2></p><p>ధన్యవాదాలు!</p>'
-      ),
-  }
-
-  try:
-    response = requests.post(url, json=payload, headers=headers, timeout=10)
-    if response.status_code != 201:
-      return (
-          '<h3>Brevo API Error:</h3><p style="color:red;">'
-          + response.text
-          + '</p><a href="/">వెనక్కి వెళ్ళండి</a>'
-      )
-  except Exception as e:
-    return (
-        '<h3>Network Error:</h3><p style="color:red;">'
-        + str(e)
-        + '</p><a href="/">వెనక్కి వెళ్ళండి</a>'
-    )
-
-  resp = redirect(url_for('verify_otp_page'))
-  resp.set_cookie('temp_name', name, max_age=300)
-  resp.set_cookie('temp_contact', email_addr, max_age=300)
-  return resp
-
+# --- 10. సీక్రెట్ అడ్మిన్ ప్యానెల్ (కేవలం మీకు మాత్రమే) ---
+@app.route('/admin_secure_portal_786')
+def admin_portal():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+    user = User.query.filter_by(email=session['user_email']).first()
+    
+    # కేవలం మీ ఈమెయిల్ మరియు అడ్మిన్ పర్మిషన్ ఉన్నవారికే
+    if not user or not user.is_admin or user.email != "mujahidsdghf@gmail.com":
+        return "404 Page Not Found", 404
+        
+    users = User.query.all()
+    products = Product.query.all()
+    return render_template('admin.html', users=users, products=products)
 
 @app.route('/logout')
 def logout():
-  resp = redirect(url_for('index'))
-  resp.delete_cookie('user_contact')
-  return resp
-
+    session.clear()
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=True)
