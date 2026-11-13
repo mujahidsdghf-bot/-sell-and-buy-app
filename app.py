@@ -198,11 +198,11 @@ def update_ad(ad_id, status):
         db.session.commit()
     return redirect(url_for('my_ads'))
 
-# --- 5 & 7. చాట్ పేజీ & చాట్ లిమిట్స్ ---
-@app.route('/chat/<int:product_id>', methods=['GET', 'POST'])
-def chat(product_id):
+@app.route('/chats-list')
+def chats_list():
     if 'user_email' not in session:
         return redirect(url_for('login'))
+    return render_template('chats.html')
     
     user = User.query.filter_by(email=session['user_email']).first()
     product = Product.query.get_or_404(product_id)
