@@ -2,23 +2,48 @@
 <html lang="te">
 <head>
     <meta charset="UTF-8">
-    <title>Chat</title>
+    <title>Chats - Sell & Buy Store</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f2f4f5; padding-bottom: 70px; }
+        .header { background: #002f34; color: white; padding: 15px; font-size: 18px; font-weight: bold; }
+        .chat-list { background: white; margin: 10px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
+        .chat-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: black; }
+        .chat-item:last-child { border-bottom: none; }
+        
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #ddd; z-index: 1000; }
+        .nav-item { text-align: center; text-decoration: none; color: #555; font-size: 11px; }
+        .nav-item.sell-btn { background: #ffcc00; color: #002f34; padding: 6px 12px; border-radius: 20px; font-weight: bold; margin-top: -8px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    </style>
 </head>
-<body style="font-family: Arial; background: #f2f4f5; padding: 20px;">
-    <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px;">
-        <h3>చాట్: {{ product.title }}</h3>
-        <hr>
-        <div style="height: 250px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; background: #fafafa;">
-            {% for c in chats %}
-                <p><b>{{ c.sender_email }}:</b> {{ c.message }}</p>
-            {% endfor %}
-        </div>
-        <form method="POST">
-            <input type="text" name="message" placeholder="సందేశం రాయండి..." required style="width: 78%; padding: 10px;">
-            <button type="submit" style="background: #002f34; color: white; padding: 10px 15px; border: none;">పంపు</button>
-        </form>
-        <br>
-        <a href="/" style="text-decoration: none; color: #002f34;">← హోమ్ పేజీ</a>
+<body>
+
+    <div class="header">Chats</div>
+
+    <div class="chat-list">
+        <a href="#" class="chat-item">
+            <div>
+                <b>Bikewale</b><br>
+                <small style="color: #777;">Brand New TVS Raider 125...</small>
+            </div>
+            <span style="font-size: 12px; color: #888;">13 Sept</span>
+        </a>
+        <a href="#" class="chat-item">
+            <div>
+                <b>Sri Laxmi Sai Bikes</b><br>
+                <small style="color: #777;">Splender+ in good condition...</small>
+            </div>
+            <span style="font-size: 12px; color: #888;">12 Sept</span>
+        </a>
     </div>
+
+    <!-- బాటమ్ నావిగేషన్ -->
+    <div class="bottom-nav">
+        <a href="/" class="nav-item">🏠<br>Home</a>
+        <a href="/chats-list" class="nav-item" style="color: #002f34; font-weight: bold;">💬<br>Chats</a>
+        <a href="/post-ad" class="nav-item sell-btn">➕<br>SELL</a>
+        <a href="/my-ads" class="nav-item">📦<br>My Ads</a>
+        <a href="/account" class="nav-item">👤<br>Account</a>
+    </div>
+
 </body>
 </html>
