@@ -212,7 +212,7 @@ def update_ad(ad_id, status):
 def chats_list():
     if 'user_email' not in session:
         return redirect(url_for('login'))
-    return render_template('chats.html')
+    return render_template('chat.html')  # ఇక్కడ chats.html బదులుగా chat.html అని ఉంటుంది
     
     user = User.query.filter_by(email=session['user_email']).first()
     product = Product.query.get_or_404(product_id)
