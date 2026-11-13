@@ -2,34 +2,35 @@
 <html lang="te">
 <head>
     <meta charset="UTF-8">
-    <title>Sell & Buy Store - OLX Style</title>
+    <title>Sell & Buy Store</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background: #f2f4f5; padding-bottom: 70px; }
-        .header { background: #002f34; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; }
-        .logo-search { display: flex; align-items: center; gap: 15px; width: 65%; }
-        .logo { font-size: 24px; font-weight: bold; color: #ffcc00; text-decoration: none; }
-        .search-container { display: flex; flex-direction: column; width: 100%; gap: 3px; }
-        .search-box { padding: 8px; border-radius: 4px; border: none; width: 100%; font-size: 14px; }
-        .location-box { font-size: 12px; color: #ddd; display: flex; align-items: center; gap: 4px; }
-        .user-section { display: flex; align-items: center; gap: 10px; }
-        .loc-display { font-size: 13px; background: #004d55; padding: 5px 8px; border-radius: 4px; }
         
-        /* ప్రమోషన్ బ్యానర్ */
-        .promo-banner { background: linear-gradient(135deg, #002f34, #005a63); color: white; margin: 15px; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .promo-banner h3 { margin: 0 0 5px 0; font-size: 18px; color: #ffcc00; }
-        .promo-btn { background: #ffcc00; color: #002f34; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; }
+        /* 1. టాప్ హెడర్: కేవలం లోగో మరియు అకౌంట్ మాత్రమే (సెర్చ్ బార్ ఇక్కడ లేదు) */
+        .header { background: #002f34; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 22px; font-weight: bold; color: #ffcc00; text-decoration: none; }
+        
+        /* ప్రమోషన్ బ్యానర్ (మళ్ళీ యాడ్ చేయబడింది) */
+        .promo-banner { background: linear-gradient(135deg, #002f34, #005a63); color: white; margin: 12px 15px; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .promo-banner h3 { margin: 0 0 4px 0; font-size: 16px; color: #ffcc00; }
+        .promo-btn { background: #ffcc00; color: #002f34; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
 
-        /* కేటగిరీలు గ్రిడ్ */
-        .categories-container { padding: 10px 15px; background: white; margin-bottom: 10px; }
-        .categories-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; text-align: center; }
-        .cat-item { text-decoration: none; color: black; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .cat-icon { font-size: 22px; background: #f2f4f5; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        /* 2. సెర్చ్ బార్: ఖచ్చితంగా కేటగిరీల పైన ఇవ్వబడింది */
+        .search-container { padding: 10px 15px; background: white; border-bottom: 1px solid #eee; }
+        .search-box { padding: 10px; border-radius: 4px; border: 1px solid #002f34; width: 100%; font-size: 14px; box-sizing: border-box; }
+        .location-info { font-size: 12px; color: #555; margin-top: 6px; font-weight: bold; }
+
+        /* 3. మొత్తం కేటగిరీలు (ఏదీ తగ్గకుండా అన్నీ ఉన్నాయి) */
+        .categories-container { padding: 15px; background: white; margin-bottom: 10px; }
+        .categories-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center; }
+        .cat-item { text-decoration: none; color: black; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 5px; font-weight: 500; }
+        .cat-icon { font-size: 22px; background: #f2f4f5; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
         /* ప్రొడక్ట్ గ్రిడ్ */
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; padding: 0 15px; }
         .product-card { background: white; border: 1px solid #ddd; border-radius: 5px; padding: 8px; }
         .price { color: #002f34; font-weight: bold; font-size: 16px; }
-        .btn { background: #002f34; color: white; padding: 6px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: block; text-align: center; margin-top: 8px; font-size: 12px; }
+        .btn { background: #002f34; color: white; padding: 6px; border-radius: 4px; text-decoration: none; display: block; text-align: center; margin-top: 8px; font-size: 12px; }
 
         /* బాటమ్ నావిగేషన్ */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #ddd; z-index: 1000; }
@@ -39,23 +40,14 @@
 </head>
 <body>
 
-    <!-- టాప్ బార్ -->
+    <!-- టాప్ హెడర్: లోగో మరియు అకౌంట్ మాత్రమే -->
     <div class="header">
-        <div class="logo-search">
-            <a href="/" class="logo">OLX</a>
-            <div class="search-container">
-                <input type="text" class="search-box" placeholder="Find Cars, Mobile Phones and more...">
-                <div class="location-box">📍 Suraram, Hyderabad</div>
-            </div>
-        </div>
-        <div class="user-section">
-            <div class="loc-display">📍 Suraram</div>
-            {% if session.get('user_email') %}
-                <a href="/account" style="color: white; text-decoration: none; font-weight: bold; font-size: 13px;">Account</a>
-            {% else %}
-                <a href="/login" style="color: #ffcc00; text-decoration: none; font-weight: bold; font-size: 13px;">Login</a>
-            {% endif %}
-        </div>
+        <a href="/" class="logo">Sell & Buy</a>
+        {% if session.get('user_email') %}
+            <a href="/account" style="color: white; text-decoration: none; font-weight: bold; font-size: 13px;">Account</a>
+        {% else %}
+            <a href="/login" style="color: #ffcc00; text-decoration: none; font-weight: bold; font-size: 13px;">Login</a>
+        {% endif %}
     </div>
 
     <!-- ప్రమోషన్ బ్యానర్ -->
@@ -67,9 +59,15 @@
         <a href="/subscription" class="promo-btn">Sell Faster →</a>
     </div>
 
-    <!-- కేటగిరీలు -->
+    <!-- సెర్చ్ బార్: ఖచ్చితంగా కేటగిరీల పైన ఇవ్వబడింది -->
+    <div class="search-container">
+        <input type="text" class="search-box" placeholder="Find Cars, Mobile Phones and more...">
+        <div class="location-info">📍 Suraram, Hyderabad</div>
+    </div>
+
+    <!-- మొత్తం కేటగిరీలు -->
     <div class="categories-container">
-        <h3>Categories</h3>
+        <h3 style="margin-top: 0;">Categories</h3>
         <div class="categories-grid">
             <a href="/?category=Cars" class="cat-item"><div class="cat-icon">🚗</div>Cars</a>
             <a href="/?category=Properties" class="cat-item"><div class="cat-icon">🏢</div>Properties</a>
@@ -80,6 +78,9 @@
             <a href="/?category=Commercial" class="cat-item"><div class="cat-icon">🚐</div>Commercial</a>
             <a href="/?category=Furniture" class="cat-item"><div class="cat-icon">🛋️</div>Furniture</a>
             <a href="/?category=Fashion" class="cat-item"><div class="cat-icon">👕</div>Fashion</a>
+            <a href="/?category=Books" class="cat-item"><div class="cat-icon">📚</div>Books & Sports</a>
+            <a href="/?category=Pets" class="cat-item"><div class="cat-icon">🐶</div>Pets</a>
+            <a href="/?category=Services" class="cat-item"><div class="cat-icon">🛠️</div>Services</a>
             <a href="/?category=Other" class="cat-item"><div class="cat-icon">📦</div>Other</a>
         </div>
     </div>
@@ -99,7 +100,7 @@
         {% endfor %}
     </div>
 
-    <!-- బాటమ్ నావిగేషన్ -->
+    <!-- బాటమ్ నావిగేషన్: చాట్స్ ఐకాన్ సరిగ్గా /chats-list కి లింక్ చేయబడింది -->
     <div class="bottom-nav">
         <a href="/" class="nav-item">🏠<br>Home</a>
         <a href="/chats-list" class="nav-item">💬<br>Chats</a>
