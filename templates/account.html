@@ -2,29 +2,89 @@
 <html lang="te">
 <head>
     <meta charset="UTF-8">
-    <title>Customer Account</title>
-</head>
-<body style="font-family: Arial; background: #f2f4f5; padding: 20px;">
-    <div style="max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; text-align: center;">
-        <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" alt="Profile" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #002f34;" onerror="this.src='https://via.placeholder.com/90';">
+    <title>My Account - OLX Style</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f2f4f5; padding-bottom: 70px; }
+        .header { background: #002f34; color: white; padding: 15px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .profile-card { background: white; margin: 15px; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border: 1px solid #e0e0e0; }
+        .profile-pic { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #002f34; }
+        .verify-banner { background: #fff8db; margin: 0 15px 15px 15px; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ffeeba; font-size: 13px; }
+        .verify-btn { background: #002f34; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
         
-        <!-- ప్రొఫైల్ పిక్చర్ అప్‌డేట్ ఫారమ్ -->
-        <form action="/update-profile-pic" method="POST" enctype="multipart/form-data" style="margin: 10px 0;">
-            <input type="file" name="profile_pic" required style="font-size: 11px;">
-            <button type="submit" style="background: #002f34; color: white; border: none; padding: 4px 8px; border-radius: 3px;">ఫోటో మార్చు</button>
-        </form>
+        .menu-list { background: white; margin: 0 15px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        .menu-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: black; font-size: 14px; }
+        .menu-item:last-child { border-bottom: none; }
+        
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #ddd; z-index: 1000; }
+        .nav-item { text-align: center; text-decoration: none; color: #555; font-size: 11px; }
+        .nav-item.sell-btn { background: #ffcc00; color: #002f34; padding: 6px 12px; border-radius: 20px; font-weight: bold; margin-top: -8px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
 
-        <h2>{{ user.email }}</h2>
-        <p>మిగిలిన ఫ్రీ యాడ్స్: <b>{{ user.free_ads_count }}</b> | మిగిలిన ఫ్రీ చాట్లు: <b>{{ user.free_chats_count }}</b></p>
-        <hr>
-        <p><b>మీ రెఫరల్ లింక్:</b></p>
-        <p style="background: #eee; padding: 8px; font-size: 13px;">sellandbuy.store/login?ref_code={{ user.referral_code }}</p>
-        <hr>
-        <a href="/my-ads" style="display: block; margin: 10px 0; text-decoration: none; color: #002f34;">📦 నా యాడ్స్ (My Ads)</a>
-        <a href="/settings" style="display: block; margin: 10px 0; text-decoration: none; color: #002f34;">⚙️ సెక్యూరిటీ & సెట్టింగ్స్</a>
-        <a href="/subscription" style="display: block; margin: 10px 0; text-decoration: none; color: green; font-weight: bold;">⭐ సబ్‌స్క్రిప్షన్ ప్లాన్స్</a>
-        <hr>
-        <a href="/" style="text-decoration: none; color: #002f34;">← హోమ్ పేజీ</a> | <a href="/logout" style="text-decoration: none; color: red; margin-left: 15px;">లాగౌట్</a>
+    <div class="header">
+        <span>My Account</span>
+        <a href="/logout" style="color: #ffcc00; font-size: 14px; text-decoration: none;">Logout</a>
     </div>
+
+    <!-- ప్రొఫైల్ హెడర్ -->
+    <div class="profile-card">
+        <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" alt="Profile" class="profile-pic" onerror="this.src='https://via.placeholder.com/60';">
+        <div>
+            <h3 style="margin: 0 0 5px 0;">{{ user.name }}</h3>
+            <form action="/update-profile-pic" method="POST" enctype="multipart/form-data" style="margin-top: 5px;">
+                <input type="file" name="profile_pic" required style="font-size: 10px; width: 140px;">
+                <button type="submit" style="background: #002f34; color: white; border: none; padding: 3px 6px; border-radius: 3px; font-size: 10px;">Update</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- వెరిఫికేషన్ బ్యాడ్జ్ -->
+    <div class="verify-banner">
+        <span>🛡️ Add your verification badge - Get Verified</span>
+        <a href="#" class="verify-btn">Get Verified</a>
+    </div>
+
+    <!-- మెనూ ఆప్షన్లు (మీరు పంపిన స్క్రీన్‌షాట్ ప్రకారం) -->
+    <div class="menu-list">
+        <a href="/subscription" class="menu-item">
+            <span>📦 Buy Packages & My Orders <br><small style="color: #777;">Packages, orders, billing and invoices</small></span>
+            <span>›</span>
+        </a>
+        <a href="#" class="menu-item">
+            <span>❤️ Wishlist <br><small style="color: #777;">View your liked items here</small></span>
+            <span>›</span>
+        </a>
+        <a href="/subscription" class="menu-item" style="background: #f0f8ff;">
+            <span>⭐ Become an Elite Buyer <br><small style="color: #002f34; font-weight: bold;">Call owners directly</small></span>
+            <span>›</span>
+        </a>
+        <a href="/subscription" class="menu-item" style="background: #f0f8ff;">
+            <span>⭐ Become an Elite Seller <span style="background: red; color: white; font-size: 9px; padding: 2px 5px; border-radius: 3px;">New</span> <br><small style="color: #002f34; font-weight: bold;">Unlock direct calls from buyers</small></span>
+            <span>›</span>
+        </a>
+        <a href="/settings" class="menu-item">
+            <span>⚙️ Settings <br><small style="color: #777;">Privacy and logout</small></span>
+            <span>›</span>
+        </a>
+        <a href="#" class="menu-item">
+            <span>❓ Help & Support <br><small style="color: #777;">Help center and legal terms</small></span>
+            <span>›</span>
+        </a>
+        <a href="#" class="menu-item">
+            <span>🌐 Select Language / भाषा चुनें <br><small style="color: #777;">English / Telugu</small></span>
+            <span>›</span>
+        </a>
+    </div>
+
+    <!-- బాటమ్ నావిగేషన్ -->
+    <div class="bottom-nav">
+        <a href="/" class="nav-item">🏠<br>Home</a>
+        <a href="/chats-list" class="nav-item">💬<br>Chats</a>
+        <a href="/post-ad" class="nav-item sell-btn">➕<br>SELL</a>
+        <a href="/my-ads" class="nav-item">📦<br>My Ads</a>
+        <a href="/account" class="nav-item">👤<br>Account</a>
+    </div>
+
 </body>
 </html>
