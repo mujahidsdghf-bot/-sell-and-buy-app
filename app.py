@@ -143,7 +143,16 @@ def verify_otp():
 # --- 2. ప్రొడక్ట్ డీటెయిల్స్ పేజీ ---
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
-    product = Product.query.get_or_404(product_id)
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM products WHERE id = ?", (product_id,))
+    product = cursor.fetchone()
+    conn.close()
+    
+    if not product:
+        return "Product not found", 404
+        
     return render_template('product_detail.html', product=product)
 
 # --- 3. యాడ్ పోస్ట్ చేయడం & సబ్‌స్క్రిప్షన్ లిమిట్ చెక్ ---
