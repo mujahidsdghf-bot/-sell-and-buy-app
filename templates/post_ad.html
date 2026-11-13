@@ -2,28 +2,77 @@
 <html lang="te">
 <head>
     <meta charset="UTF-8">
-    <title>Post Ad</title>
+    <title>Post Ad - OLX Style</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f2f4f5; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { color: #002f34; border-bottom: 2px solid #ffcc00; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+        .btn { background: #002f34; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; }
+        .btn:hover { background: #004d55; }
+    </style>
 </head>
-<body style="font-family: Arial; background: #f2f4f5; padding: 20px;">
-    <div style="max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px;">
-        <h2>కొత్త యాడ్ పోస్ట్ చేయండి</h2>
+<body>
+    <div class="container">
+        <h2>కొత్త యాడ్ పోస్ట్ చేయండి (Include some details)</h2>
         <p>మిగిలిన ఫ్రీ యాడ్స్: <b>{{ user.free_ads_count }}</b></p>
+        
         <form method="POST">
-            <input type="text" name="title" placeholder="ప్రొడక్ట్ పేరు (Title)" required style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
-            <select name="category" style="width: 100%; padding: 10px; margin-bottom: 10px;">
-                <option value="Cars">Cars</option>
-                <option value="Mobiles">Mobiles</option>
-                <option value="Bikes">Bikes</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Furniture">Furniture</option>
-            </select><br>
-            <input type="number" name="price" placeholder="ధర (Price in ₹)" required style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
-            <textarea name="description" placeholder="వివరణ (Description)" style="width: 100%; padding: 10px; margin-bottom: 10px;"></textarea><br>
-            <input type="text" name="location" value="Suraram, Hyderabad" style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
-            <button type="submit" style="background: #002f34; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; width: 100%;">యాడ్ పోస్ట్ చేయి</button>
+            <div class="form-group">
+                <label>కేటగిరీ సెలెక్ట్ చేయండి *</label>
+                <select name="category" required>
+                    <optgroup label="Cars & Vehicles">
+                        <option value="Cars">Cars</option>
+                        <option value="Bikes">Bikes (Motorcycles, Scooters, Bicycles)</option>
+                        <option value="Commercial Vehicles">Commercial Vehicles & Spares</option>
+                    </optgroup>
+                    <optgroup label="Properties">
+                        <option value="Properties">For Sale / Rent: Houses, Apartments, Lands, PG</option>
+                    </optgroup>
+                    <optgroup label="Mobiles & Electronics">
+                        <option value="Mobiles">Mobile Phones, Tablets, Accessories</option>
+                        <option value="Electronics">Electronics & Appliances</option>
+                    </optgroup>
+                    <optgroup label="Home & Lifestyle">
+                        <option value="Furniture">Furniture (Sofa, Beds, Decor)</option>
+                        <option value="Fashion">Fashion (Men, Women, Kids)</option>
+                        <option value="Books & Sports">Books, Sports & Hobbies</option>
+                    </optgroup>
+                    <optgroup label="Others & Services">
+                        <option value="Pets">Pets (Dogs, Fishes, Aquarium)</option>
+                        <option value="Jobs">Jobs (Data Entry, Sales, Driver, Teacher)</option>
+                        <option value="Services">Services (Education, Tours, Repair, Health)</option>
+                        <option value="Other">Other Items</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>ప్రొడక్ట్ పేరు (Ad Title) *</label>
+                <input type="text" name="title" placeholder="ఉదా: Brand, Model, Age" required>
+            </div>
+
+            <div class="form-group">
+                <label>ధర (Price in ₹) *</label>
+                <input type="number" name="price" placeholder="₹ ధర ఇవ్వండి" required>
+            </div>
+
+            <div class="form-group">
+                <label>వివరణ (Describe what you are selling) *</label>
+                <textarea name="description" rows="4" placeholder="ప్రొడక్ట్ కండిషన్ మరియు ఇతర వివరాలు రాయండి" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>లొకేషన్ (Location)</label>
+                <input type="text" name="location" value="Suraram, Hyderabad">
+            </div>
+
+            <button type="submit" class="btn">Post Now</button>
         </form>
         <br>
-        <a href="/" style="color: #002f34; text-decoration: none;">← హోమ్ పేజీ</a>
+        <a href="/" style="color: #002f34; text-decoration: none; font-weight: bold;">← హోమ్ పేజీకి వెళ్ళండి</a>
     </div>
 </body>
 </html>
