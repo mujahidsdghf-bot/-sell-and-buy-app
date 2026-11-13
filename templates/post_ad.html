@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="te">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Post Ad - Sell & Buy Store</title>
@@ -16,12 +16,11 @@
 </head>
 <body>
     <div class="container">
-        <h2>కొత్త యాడ్ పోస్ట్ చేయండి (Post Your Ad)</h2>
+        <h2>Post Your Ad</h2>
         
-        <!-- ఫోటో మరియు లొకేషన్ పర్ఫెక్ట్‌గా సేవ్ అవ్వడానికి enctype చాలా ముఖ్యం -->
         <form method="POST" enctype="multipart/form-data">
             <div class="form-group">
-                <label>కేటగిరీ సెలెక్ట్ చేయండి *</label>
+                <label>Select Category *</label>
                 <select name="category" required>
                     <optgroup label="Cars & Vehicles">
                         <option value="Cars">Cars</option>
@@ -85,37 +84,37 @@
             </div>
 
             <div class="form-group">
-                <label>ప్రొడక్ట్ పేరు (Ad Title) *</label>
+                <label>Ad Title *</label>
                 <input type="text" name="title" placeholder="Brand, Model, Age" required>
             </div>
 
             <div class="form-group">
-                <label>ధర (Price in ₹) *</label>
-                <input type="number" name="price" placeholder="₹ ధర ఇవ్వండి" required>
+                <label>Price (in ₹) *</label>
+                <input type="number" name="price" placeholder="Enter Price" required>
             </div>
 
-            <!-- ప్రొడక్ట్ ఫోటో అప్లోడ్ కాలమ్ -->
+            <!-- Product Photo Upload -->
             <div class="form-group">
-                <label>ప్రొడక్ట్ ఫోటో అప్లోడ్ చేయండి (Upload Photo) *</label>
+                <label>Upload Product Photo *</label>
                 <input type="file" name="image" accept="image/*" required style="background: #f9f9f9; padding: 8px;">
             </div>
 
             <div class="form-group">
-                <label>వివరణ (Description) *</label>
-                <textarea name="description" rows="4" placeholder="ప్రొడక్ట్ వివరాలు రాయండి" required></textarea>
+                <label>Description *</label>
+                <textarea name="description" rows="4" placeholder="Mention features, condition and other details" required></textarea>
             </div>
 
-            <!-- కంపల్సరీ లొకేషన్ కాలమ్ -->
+            <!-- Mandatory Location Column -->
             <div class="form-group">
-                <label style="color: #002f34;">📍 లొకేషన్ (Location) - కంపల్సరీ *</label>
-                <input type="text" name="location" class="location-box" value="Suraram, Hyderabad" required placeholder="మీ ప్రాంతం మరియు నగరం రాయండి (ఉదా: Suraram, Hyderabad)">
-                <small style="color: #666; font-size: 11px;">ఈ లొకేషన్ హోమ్ పేజీలో మరియు ప్రొడక్ట్ డీటెయిల్స్‌లో కనిపిస్తుంది.</small>
+                <label style="color: #002f34;">📍 Location - Mandatory *</label>
+                <input type="text" name="location" class="location-box" value="Suraram, Hyderabad" required placeholder="Enter area and city (e.g., Suraram, Hyderabad)">
+                <small style="color: #666; font-size: 11px;">This location will be displayed on the home page and product details.</small>
             </div>
 
             <button type="submit" class="btn">Post Now</button>
         </form>
         <br>
-        <a href="/" style="color: #002f34; text-decoration: none; font-weight: bold;">← హోమ్ పేజీకి వెళ్ళండి</a>
+        <a href="/" style="color: #002f34; text-decoration: none; font-weight: bold;">← Back to Home</a>
     </div>
 </body>
 </html>
