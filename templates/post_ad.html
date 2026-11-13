@@ -2,7 +2,7 @@
 <html lang="te">
 <head>
     <meta charset="UTF-8">
-    <title>Post Ad - OLX Style</title>
+    <title>Post Ad - Sell & Buy Store</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background: #f2f4f5; padding: 20px; }
         .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -11,47 +11,79 @@
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
         .btn { background: #002f34; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; }
-        .btn:hover { background: #004d55; }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>కొత్త యాడ్ పోస్ట్ చేయండి (Include some details)</h2>
-        <p>మిగిలిన ఫ్రీ యాడ్స్: <b>{{ user.free_ads_count }}</b></p>
-        
         <form method="POST">
             <div class="form-group">
                 <label>కేటగిరీ సెలెక్ట్ చేయండి *</label>
                 <select name="category" required>
                     <optgroup label="Cars & Vehicles">
                         <option value="Cars">Cars</option>
-                        <option value="Bikes">Bikes (Motorcycles, Scooters, Bicycles)</option>
-                        <option value="Commercial Vehicles">Commercial Vehicles & Spares</option>
+                        <option value="Motorcycles">Motorcycles & Bikes</option>
+                        <option value="Scooters">Scooters</option>
+                        <option value="Spare Parts">Spare Parts & Accessories</option>
+                        <option value="Commercial Vehicles">Commercial Vehicles & Other</option>
                     </optgroup>
                     <optgroup label="Properties">
-                        <option value="Properties">For Sale / Rent: Houses, Apartments, Lands, PG</option>
+                        <option value="Houses & Apartments For Sale">For Sale: Houses & Apartments</option>
+                        <option value="Houses & Apartments For Rent">For Rent: Houses & Apartments</option>
+                        <option value="Lands & Plots">Lands & Plots</option>
+                        <option value="Shops & Offices">Shops & Offices For Sale/Rent</option>
+                        <option value="PG & Guest Houses">PG & Guest Houses</option>
                     </optgroup>
                     <optgroup label="Mobiles & Electronics">
-                        <option value="Mobiles">Mobile Phones, Tablets, Accessories</option>
-                        <option value="Electronics">Electronics & Appliances</option>
+                        <option value="Mobile Phones">Mobile Phones</option>
+                        <option value="Tablets">Tablets</option>
+                        <option value="Mobile Accessories">Mobile Accessories</option>
+                        <option value="Electronics & Appliances">Electronics & Appliances</option>
                     </optgroup>
-                    <optgroup label="Home & Lifestyle">
-                        <option value="Furniture">Furniture (Sofa, Beds, Decor)</option>
-                        <option value="Fashion">Fashion (Men, Women, Kids)</option>
-                        <option value="Books & Sports">Books, Sports & Hobbies</option>
+                    <optgroup label="Home & Furniture">
+                        <option value="Sofa & Dining">Sofa & Dining</option>
+                        <option value="Beds & Wardrobes">Beds & Wardrobes</option>
+                        <option value="Home Decor">Home Decor & Garden</option>
+                        <option value="Kids Furniture">Kids Furniture</option>
+                        <option value="Other Household">Other Household Items</option>
                     </optgroup>
-                    <optgroup label="Others & Services">
-                        <option value="Pets">Pets (Dogs, Fishes, Aquarium)</option>
-                        <option value="Jobs">Jobs (Data Entry, Sales, Driver, Teacher)</option>
-                        <option value="Services">Services (Education, Tours, Repair, Health)</option>
-                        <option value="Other">Other Items</option>
+                    <optgroup label="Fashion & Beauty">
+                        <option value="Men Fashion">Men Fashion</option>
+                        <option value="Women Fashion">Women Fashion</option>
+                        <option value="Kids Fashion">Kids Fashion</option>
+                    </optgroup>
+                    <optgroup label="Jobs">
+                        <option value="Data Entry">Data entry & Back office</option>
+                        <option value="Sales & Marketing">Sales & Marketing</option>
+                        <option value="BPO & Telecaller">BPO & Telecaller</option>
+                        <option value="Driver">Driver</option>
+                        <option value="Office Assistant">Office Assistant</option>
+                        <option value="Delivery & Collection">Delivery & Collection</option>
+                        <option value="Teacher">Teacher</option>
+                        <option value="Cook">Cook</option>
+                    </optgroup>
+                    <optgroup label="Pets & Hobbies">
+                        <option value="Dogs">Dogs</option>
+                        <option value="Fishes & Aquarium">Fishes & Aquarium</option>
+                        <option value="Pet Food & Accessories">Pet Food & Accessories</option>
+                        <option value="Books">Books & Magazines</option>
+                        <option value="Gym & Fitness">Gym & Fitness</option>
+                        <option value="Musical Instruments">Musical Instruments</option>
+                    </optgroup>
+                    <optgroup label="Services">
+                        <option value="Education & Classes">Education & Classes</option>
+                        <option value="Tours & Travel">Tours & Travel</option>
+                        <option value="Electronics Repair">Electronics Repair & Services</option>
+                        <option value="Health & Beauty">Health & Beauty</option>
+                        <option value="Packers & Movers">Packers & Movers</option>
+                        <option value="Other Services">Other Services</option>
                     </optgroup>
                 </select>
             </div>
 
             <div class="form-group">
                 <label>ప్రొడక్ట్ పేరు (Ad Title) *</label>
-                <input type="text" name="title" placeholder="ఉదా: Brand, Model, Age" required>
+                <input type="text" name="title" placeholder="Brand, Model, Age" required>
             </div>
 
             <div class="form-group">
@@ -60,8 +92,8 @@
             </div>
 
             <div class="form-group">
-                <label>వివరణ (Describe what you are selling) *</label>
-                <textarea name="description" rows="4" placeholder="ప్రొడక్ట్ కండిషన్ మరియు ఇతర వివరాలు రాయండి" required></textarea>
+                <label>వివరణ (Description) *</label>
+                <textarea name="description" rows="4" placeholder="ప్రొడక్ట్ వివరాలు రాయండి" required></textarea>
             </div>
 
             <div class="form-group">
